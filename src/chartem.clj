@@ -38,8 +38,4 @@
     {:pass? true}
     {:pass? false
      :expected (:description matcher)
-     :was ((:describe-mismatch matcher) a)
-;; "\nExpected: " ++ description m ++ "\n     but: " ++ describeMismatch m a
-     :message (str "\nExpected: " (:description matcher)
-                   "\n     but: "
-                   ((:describe-mismatch matcher) a))}))
+     :was ((:describe-mismatch matcher) a)}))
