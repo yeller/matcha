@@ -13,6 +13,28 @@
 ;;
 ;;  a match is a map with pass? and message, message will be a string
 ;;  if pass? if false
+;;
+;;  TODO: matchers list
+;; -- ** Matchers on seqs
+;; , is-empty
+;; , has-size
+;; , every-item
+;; , include?
+;; -- ** Matchers on numbers
+;; , <
+;; , <=
+;; , >
+;; , >=
+;; -- ** Matchers on nil
+;; , nil?
+;; -- ** Matcher combinators
+;; , is-not
+;; , any-of
+;; , on
+;; , and-also
+;; -- ** Utility functions for writing your own matchers
+;; , matcher-on
+;; , match-list
 
 (defn =
   "matches based on equality of the value given
