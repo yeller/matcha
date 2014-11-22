@@ -14,17 +14,29 @@
 ;;  a match is a map with pass? and message, message will be a string
 ;;  if pass? if false
 
-(defn equals [a]
+(defn equals
+  "matches based on equality of the value given
+
+  (run-match (equals 1) 1) ; => passes
+  (run-match (equals 1) 2) ; => fails "
+  [a]
   {:match (fn [b] (= a b))
    :description (str "(= " (pr-str a) ")")
    :describe-mismatch (fn [b] (pr-str b))})
 
-(defn format-message [result]
+(defn format-message
+  "turns the results of a failing match into a human readable error message,
+   suitable for printing with clojure.core/print or clojure.core/println"
+  [result]
   (str "\nExpected: " (:expected result)
        "\n     but: "
        (:was result)))
 
 (defn every?
+  "matches if all of the matchers given pass:
+
+  (run-match (every? (equals 1) (equals 1)) 1) ; => passes
+  (run-match (every? (equals 1) (equals 1)) 2) ; => fails"
   [ms]
   {:match (fn [a] (reduce (fn [x y] (and x y))
                           (map #((:match %) a) ms)))
@@ -33,6 +45,18 @@
    :describe-mismatch })
 
 (defn run-match
+  "runs a matcher, given a value to match against.
+  Returns a map:
+
+  if the matcher matches the value:
+  {:pass? true}
+
+  if the matcher fails:
+  {:pass? false
+  :expected (a string)
+  :was (a string)}
+
+  the results can be made human readable with (format-message result)"
   [matcher a]
   (if ((:match matcher) a)
     {:pass? true}
