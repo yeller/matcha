@@ -22,8 +22,7 @@
 (defn format-message [result]
   (str "\nExpected: " (:expected result)
        "\n     but: "
-       (:was result))
-  )
+       (:was result)))
 
 (defn every?
   [ms]
