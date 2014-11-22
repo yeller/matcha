@@ -14,11 +14,11 @@
 ;;  a match is a map with pass? and message, message will be a string
 ;;  if pass? if false
 
-(defn equals
+(defn =
   "matches based on equality of the value given
 
-  (run-match (equals 1) 1) ; => passes
-  (run-match (equals 1) 2) ; => fails "
+  (chartem/run-match (chartem/= 1) 1) ; => passes
+  (chartem/run-match (chartem/= 1) 2) ; => fails "
   [a]
   {:match (fn [b] (= a b))
    :description (str "(= " (pr-str a) ")")
@@ -32,17 +32,25 @@
        "\n     but: "
        (:was result)))
 
+(defn describe-list [call xs]
+  (str "(" call " " (clojure.string/join " " xs) ")"))
+
 (defn every?
   "matches if all of the matchers given pass:
 
-  (run-match (every? (equals 1) (equals 1)) 1) ; => passes
-  (run-match (every? (equals 1) (equals 1)) 2) ; => fails"
+  (chartem/run-match (every? (chartem/= 1) (chartem/= 1)) 1) ; => passes
+  (chartem/run-match (every? (chartem/= 1) (chartem/= 1)) 2) ; => fails"
   [ms]
-  {:match (fn [a] (reduce (fn [x y] (and x y))
+  {:match
+   (fn [a] (reduce (fn [x y] (and x y))
                           (map #((:match %) a) ms)))
-   :description (str "(every? " (clojure.string/join " "
-                                                     (map :description ms)) ")")
-   :describe-mismatch })
+   :description
+   :describe-mismatch
+   (describe-list "every?" (map :description ms))
+   (fn [a]
+     (->> ms
+       (filter #(not ((:match %) a)))
+       (map #((:describe-mismatch %) a))))})
 
 (defn run-match
   "runs a matcher, given a value to match against.
