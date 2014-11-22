@@ -16,7 +16,6 @@
 ;;
 ;;  TODO: matchers list
 ;; -- ** Matchers on seqs
-;; , is-empty
 ;; , has-size
 ;; , every-item
 ;; , include?
@@ -44,7 +43,16 @@
   [a]
   {:match (fn [b] (= a b))
    :description (str "(= " (pr-str a) ")")
-   :describe-mismatch (fn [b] (pr-str b))})
+   :describe-mismatch pr-str})
+
+(def empty?
+  "matches if the collection passed is empty
+
+  (chartem/run-match chartem/empty? [1]) ; => passes
+  (chartem/run-match chartem/empty? [])  ; => fails"
+  {:match empty?
+   :description "(empty?)"
+   :describe-mismatch pr-str})
 
 (defn format-message
   "turns the results of a failing match into a human readable error message,
