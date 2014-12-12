@@ -1,4 +1,6 @@
-(ns chartem)
+(ns chartem
+  (:refer-clojure :exclude [empty? every? = some])
+  (:require [clojure.string :as string]))
 ;; Matcher
 ;; Match
 ;;
@@ -14,11 +16,12 @@
 ;;  a match is a map with pass? and message, message will be a string
 ;;  if pass? if false
 ;;
-;;  TODO: matchers list
-;; -- ** Matchers on seqs
+;;  WIP:
 ;; , has-size
 ;; , every-item
 ;; , include?
+;;  TODO: matchers list
+;; -- ** Matchers on seqs
 ;; -- ** Matchers on numbers
 ;; , <
 ;; , <=
@@ -41,7 +44,7 @@
   (chartem/run-match (chartem/= 1) 1) ; => passes
   (chartem/run-match (chartem/= 1) 2) ; => fails "
   [a]
-  {:match (fn [b] (= a b))
+  {:match (fn [b] (clojure.core/= a b))
    :description (str "(= " (pr-str a) ")")
    :describe-mismatch pr-str})
 
@@ -50,7 +53,7 @@
 
   (chartem/run-match chartem/empty? [1]) ; => passes
   (chartem/run-match chartem/empty? [])  ; => fails"
-  {:match empty?
+  {:match clojure.core/empty?
    :description "(empty?)"
    :describe-mismatch pr-str})
 
@@ -68,19 +71,43 @@
 (defn every?
   "matches if all of the matchers given pass:
 
-  (chartem/run-match (every? (chartem/= 1) (chartem/= 1)) 1) ; => passes
-  (chartem/run-match (every? (chartem/= 1) (chartem/= 1)) 2) ; => fails"
-  [ms]
+  (chartem/run-match (chartem/every? (chartem/= 1) (chartem/= 1)) 1) ; => passes
+  (chartem/run-match (chartem/every? (chartem/= 1) (chartem/= 1)) 2) ; => fails"
+  [& ms]
   {:match
    (fn [a] (reduce (fn [x y] (and x y))
                           (map #((:match %) a) ms)))
    :description
-   :describe-mismatch
    (describe-list "every?" (map :description ms))
+   :describe-mismatch
    (fn [a]
-     (->> ms
-       (filter #(not ((:match %) a)))
-       (map #((:describe-mismatch %) a))))})
+     (describe-list
+       "every?"
+       (->> ms
+         (filter #(not ((:match %) a)))
+         (map #((:describe-mismatch %) a)))))})
+
+(defn some
+  "passes if any of the given matchers pass:
+
+  (chartem/run-match (some (chartem/= 1) (chartem/= 2)) 2) ; => passes
+  (chartem/run-match (some (chartem/= 3) (chartem/= 2)) 1) ; => fails"
+  [& ms]
+  {:match
+   (fn [a]
+     (reduce (fn [x y] (or x y))
+             (map #((:match %) a) ms)))
+
+   :description
+   (describe-list "some" (map :description ms))
+
+   :describe-mismatch
+   (fn [a]
+     (describe-list
+       "some"
+       (->> ms
+         (filter #(not ((:match %) a)))
+         (map #((:describe-mismatch %) a)))))})
 
 (defn run-match
   "runs a matcher, given a value to match against.
