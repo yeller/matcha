@@ -38,6 +38,9 @@
 (defn describe-list [call xs]
   (str "(" call " " (clojure.string/join " " xs) ")"))
 
+(defn standard-describe-mismatch [x]
+  (str "was " (pr-str x)))
+
 (defn =
   "matches based on equality of the value given
 
@@ -46,7 +49,7 @@
   [a]
   {:match (fn [b] (core/= a b))
    :description (describe-list "=" [a])
-   :describe-mismatch pr-str})
+   :describe-mismatch standard-describe-mismatch})
 
 (def empty?
   "matches if the collection passed is empty
@@ -55,7 +58,7 @@
   (chartem/run-match chartem/empty? [])  ; => fails"
   {:match core/empty?
    :description "(empty?)"
-   :describe-mismatch pr-str})
+   :describe-mismatch standard-describe-mismatch})
 
 (defn format-message
   "turns the results of a failing match into a human readable error message,
@@ -77,12 +80,7 @@
    :description
    (describe-list "all-of" (map :description ms))
    :describe-mismatch
-   (fn [a]
-     (describe-list
-       "all-of"
-       (->> ms
-         (filter #(not ((:match %) a)))
-         (map #((:describe-mismatch %) a)))))})
+   standard-describe-mismatch})
 
 (defn any-of
   "passes if any of the given matchers pass:
@@ -99,12 +97,7 @@
    (describe-list "any-of" (map :description ms))
 
    :describe-mismatch
-   (fn [a]
-     (describe-list
-       "any-of"
-       (->> ms
-         (filter #(not ((:match %) a)))
-         (map #((:describe-mismatch %) a)))))})
+   standard-describe-mismatch})
 
 (defn some
   [m]
@@ -116,12 +109,7 @@
    :description
    (describe-list "some" [(:description m)])
    :describe-mismatch
-   (fn [xs]
-     (describe-list
-       "some"
-       (->> xs
-         (filter #(not ((:match m) %)))
-         (map #((:describe-mismatch m) %)))))})
+   standard-describe-mismatch})
 
 (defn every?
   [m]
@@ -131,12 +119,7 @@
    :description
    (describe-list "every?" [(:description m)])
    :describe-mismatch
-   (fn [xs]
-     (describe-list
-       "every?"
-       (->> xs
-         (filter #(not ((:match m) %)))
-         (map #((:describe-mismatch m) %)))))})
+   standard-describe-mismatch})
 
 (defn has-count
   "passes if the sequence received has the given count
@@ -146,8 +129,7 @@
   {:match (fn [xs] (clojure.core/= (count xs) n))
    :description (describe-list "has-count" [n])
    :describe-mismatch
-   (fn [xs]
-     (str "count was " (count xs)))})
+   standard-describe-mismatch})
 
 (defn includes
   "passes if the sequence received includes the given item
@@ -160,11 +142,7 @@
    :description
    (describe-list "includes" [x])
    :describe-mismatch
-   (fn [xs]
-     (describe-list
-       "includes"
-       (->> xs
-         (filter #(not (#{x} %))))))})
+   standard-describe-mismatch})
 
 (defn run-match
   "runs a matcher, given a value to match against.
