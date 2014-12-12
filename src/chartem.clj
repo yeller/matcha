@@ -1,5 +1,9 @@
 (ns chartem
-  (:refer-clojure :exclude [empty? every? = some not <= >=])
+  (:refer-clojure
+    :exclude
+    [empty? every?
+     = some not <= >= < >
+     instance? string? map? seq? char? vector? nil?])
   (:require [clojure.string :as string]
             [clojure.core :as core]))
 ;; Matcher
@@ -19,8 +23,6 @@
 ;;
 ;;  WIP:
 ;;  TODO: matchers list
-;; -- ** Matchers on seqs
-;; -- ** Matchers on numbers
 ;; -- ** Matchers on nil
 ;; , nil?
 ;; -- ** Matcher combinators
@@ -28,6 +30,9 @@
 ;; , any-of
 ;; , on
 ;; , and-also
+;; typed matchers:
+;; int?, string? etc from core
+;; instanceof
 ;; -- ** Utility functions for writing your own matchers
 ;; , matcher-on
 ;; , match-list
@@ -189,6 +194,78 @@
    :description (describe-list "not" [m])
    :describe-mismatch
    standard-describe-mismatch})
+
+(defn describe-class-mismatch [x]
+  (str "was " (pr-str x) " <" (class x) ">"))
+
+(defn instance?
+  "passes if the value matches the given class
+  (chartem/run-match (chartem/instance? clojure.lang.Keyword) :foo) ; => passes
+  (chartem/run-match (chartem/instance? clojure.lang.Keyword) 1) ; => fails"
+  [klazz]
+  {:match #(core/instance? klazz %)
+   :description (describe-list "instance?" [klazz])
+   :describe-mismatch describe-class-mismatch})
+
+(def
+  ^{:doc
+    "passes if the value is a string
+    (chartem/run-match chartem/string? \"foo\") ; => passes
+    (chartem/run-match chartem/string? 1) ; => fails"}
+  string?
+  {:match core/string?
+   :description "(string?)"
+   :describe-mismatch describe-class-mismatch})
+
+(def
+  ^{:doc
+    "passes if the value is a map
+    (chartem/run-match chartem/map? {}) ; => passes
+    (chartem/run-match chartem/map? 1) ; => fails"}
+  map?
+  {:match core/map?
+   :description "(map?)"
+   :describe-mismatch describe-class-mismatch})
+
+(def
+  ^{:doc
+    "passes if the value is a seq
+    (chartem/run-match chartem/seq? {}) ; => passes
+    (chartem/run-match chartem/seq? 1) ; => fails"}
+  seq?
+  {:match core/seq?
+   :description "(seq?)"
+   :describe-mismatch describe-class-mismatch})
+
+(def
+  ^{:doc
+    "passes if the value is a char
+    (chartem/run-match chartem/char? {}) ; => passes
+    (chartem/run-match chartem/char? 1) ; => fails"}
+  char?
+  {:match core/char?
+   :description "(char?)"
+   :describe-mismatch describe-class-mismatch})
+
+(def
+  ^{:doc
+    "passes if the value is a vector
+    (chartem/run-match chartem/vector? {}) ; => passes
+    (chartem/run-match chartem/vector? 1) ; => fails"}
+  vector?
+  {:match core/vector?
+   :description "(vector?)"
+   :describe-mismatch describe-class-mismatch})
+
+(def
+  ^{:doc
+    "passes if the value is nil
+    (chartem/run-match chartem/nil? nil) ; => passes
+    (chartem/run-match chartem/nil? 1) ; => fails"}
+  nil?
+  {:match core/nil?
+   :description "(nil?)"
+   :describe-mismatch describe-class-mismatch})
 
 (defn assert-good-matcher [{:keys [match description describe-mismatch] :as matcher}]
   (assert (not (nil? matcher)) "Matcher should not be nil")

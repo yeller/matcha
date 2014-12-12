@@ -63,3 +63,31 @@
 (deftest >-test
   (check-successful (chartem/> 1) 0)
   (check-failure (chartem/> 1) 2))
+
+(deftest instance?-test
+  (check-successful (chartem/instance? clojure.lang.Keyword) :foo)
+  (check-failure (chartem/instance? clojure.lang.Keyword) 1))
+
+(deftest string?-test
+  (check-successful chartem/string? "1")
+  (check-failure chartem/string? 1))
+
+(deftest map?-test
+  (check-successful chartem/map? {})
+  (check-failure chartem/map? 1))
+
+(deftest seq?-test
+  (check-successful chartem/seq? '())
+  (check-failure chartem/seq? 1))
+
+(deftest char?-test
+  (check-successful chartem/char? \a)
+  (check-failure chartem/char? 1))
+
+(deftest vector?-test
+  (check-successful chartem/vector? [])
+  (check-failure chartem/vector? 1))
+
+(deftest nil?-test
+  (check-successful chartem/nil? nil)
+  (check-failure chartem/nil? 1))
