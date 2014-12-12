@@ -22,10 +22,22 @@
   (check-successful chartem/empty? [])
   (check-failure chartem/empty? [1]))
 
-(deftest every?-test
-  (check-successful (chartem/every? (chartem/= 1) (chartem/= 1)) 1)
-  (check-failure (chartem/every? (chartem/= 2) (chartem/= 1)) 1))
+(deftest all-of-test
+  (check-successful (chartem/all-of (chartem/= 1) (chartem/= 1)) 1)
+  (check-failure (chartem/all-of (chartem/= 2) (chartem/= 1)) 1))
+
+(deftest any-of-test
+  (check-successful (chartem/any-of (chartem/= 1) (chartem/= 2)) 2)
+  (check-failure (chartem/any-of (chartem/= 1) (chartem/= 2)) 3))
+
+(deftest has-count
+  (check-successful (chartem/has-count 0) [])
+  (check-failure (chartem/has-count 1) []))
 
 (deftest some-test
-  (check-successful (chartem/some (chartem/= 1) (chartem/= 2)) 2)
-  (check-failure (chartem/some (chartem/= 1) (chartem/= 2)) 3))
+  (check-successful (chartem/some (chartem/= 1)) [1])
+  (check-failure (chartem/some (chartem/= 2)) [1]))
+
+(deftest every?-test
+  (check-successful (chartem/every? (chartem/= 1)) [1 1])
+  (check-failure (chartem/every? (chartem/= 1)) [1 2]))

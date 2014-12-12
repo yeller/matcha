@@ -1,6 +1,7 @@
 (ns chartem
   (:refer-clojure :exclude [empty? every? = some])
-  (:require [clojure.string :as string]))
+  (:require [clojure.string :as string]
+            [clojure.core :as core]))
 ;; Matcher
 ;; Match
 ;;
@@ -17,8 +18,8 @@
 ;;  if pass? if false
 ;;
 ;;  WIP:
-;; , has-size
-;; , every-item
+;; , every?
+;; , some
 ;; , include?
 ;;  TODO: matchers list
 ;; -- ** Matchers on seqs
@@ -37,6 +38,8 @@
 ;; -- ** Utility functions for writing your own matchers
 ;; , matcher-on
 ;; , match-list
+(defn describe-list [call xs]
+  (str "(" call " " (clojure.string/join " " xs) ")"))
 
 (defn =
   "matches based on equality of the value given
@@ -44,8 +47,8 @@
   (chartem/run-match (chartem/= 1) 1) ; => passes
   (chartem/run-match (chartem/= 1) 2) ; => fails "
   [a]
-  {:match (fn [b] (clojure.core/= a b))
-   :description (str "(= " (pr-str a) ")")
+  {:match (fn [b] (core/= a b))
+   :description (describe-list "=" [a])
    :describe-mismatch pr-str})
 
 (def empty?
@@ -53,7 +56,7 @@
 
   (chartem/run-match chartem/empty? [1]) ; => passes
   (chartem/run-match chartem/empty? [])  ; => fails"
-  {:match clojure.core/empty?
+  {:match core/empty?
    :description "(empty?)"
    :describe-mismatch pr-str})
 
@@ -65,33 +68,30 @@
        "\n     but: "
        (:was result)))
 
-(defn describe-list [call xs]
-  (str "(" call " " (clojure.string/join " " xs) ")"))
-
-(defn every?
+(defn all-of
   "matches if all of the matchers given pass:
 
-  (chartem/run-match (chartem/every? (chartem/= 1) (chartem/= 1)) 1) ; => passes
-  (chartem/run-match (chartem/every? (chartem/= 1) (chartem/= 1)) 2) ; => fails"
+  (chartem/run-match (chartem/all-of (chartem/= 1) (chartem/= 1)) 1) ; => passes
+  (chartem/run-match (chartem/all-of (chartem/= 1) (chartem/= 1)) 2) ; => fails"
   [& ms]
   {:match
    (fn [a] (reduce (fn [x y] (and x y))
                           (map #((:match %) a) ms)))
    :description
-   (describe-list "every?" (map :description ms))
+   (describe-list "all-of" (map :description ms))
    :describe-mismatch
    (fn [a]
      (describe-list
-       "every?"
+       "all-of"
        (->> ms
          (filter #(not ((:match %) a)))
          (map #((:describe-mismatch %) a)))))})
 
-(defn some
+(defn any-of
   "passes if any of the given matchers pass:
 
-  (chartem/run-match (some (chartem/= 1) (chartem/= 2)) 2) ; => passes
-  (chartem/run-match (some (chartem/= 3) (chartem/= 2)) 1) ; => fails"
+  (chartem/run-match (chartem/any-of (chartem/= 1) (chartem/= 2)) 2) ; => passes
+  (chartem/run-match (chartem/any-of (chartem/= 3) (chartem/= 2)) 1) ; => fails"
   [& ms]
   {:match
    (fn [a]
@@ -99,15 +99,55 @@
              (map #((:match %) a) ms)))
 
    :description
-   (describe-list "some" (map :description ms))
+   (describe-list "any-of" (map :description ms))
 
    :describe-mismatch
    (fn [a]
      (describe-list
-       "some"
+       "any-of"
        (->> ms
          (filter #(not ((:match %) a)))
          (map #((:describe-mismatch %) a)))))})
+
+(defn some
+  [m]
+  "passes if the matcher given passes on any of the items of the sequence this matcher receives
+  (chartem/run-match (chartem/some (chartem/= 1)) [1]) ; => passes
+  (chartem/run-match (chartem/some (chartem/= 0)) [1]) ; => fails"
+  {:match
+   (fn [xs] (core/some #((:match m) %) xs))
+   :description
+   (describe-list "some" [(:description m)])
+   :describe-mismatch
+   (fn [xs]
+     (describe-list
+       "some"
+       (->> xs
+         (filter #(not ((:match m) %)))
+         (map #((:describe-mismatch m) %)))))})
+
+(defn every?
+  [m]
+  "passes if the matcher given passes against any of the items of the sequence the resulting matcher receives"
+  {:match
+   (fn [xs] (core/every? #((:match m) %) xs))
+   :description
+   (describe-list "every?" [(:description m)])
+   :describe-mismatch
+   (fn [xs]
+     (describe-list
+       "every?"
+       (->> xs
+         (filter #(not ((:match m) %)))
+         (map #((:describe-mismatch m) %)))))})
+
+(defn has-count
+  [n]
+  {:match (fn [xs] (clojure.core/= (count xs) n))
+   :description (describe-list "has-count" [n])
+   :describe-mismatch
+   (fn [xs]
+     (str "count was " (count xs)))})
 
 (defn run-match
   "runs a matcher, given a value to match against.
