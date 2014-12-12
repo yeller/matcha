@@ -1,5 +1,5 @@
 (ns chartem
-  (:refer-clojure :exclude [empty? every? = some])
+  (:refer-clojure :exclude [empty? every? = some not <= >=])
   (:require [clojure.string :as string]
             [clojure.core :as core]))
 ;; Matcher
@@ -21,10 +21,6 @@
 ;;  TODO: matchers list
 ;; -- ** Matchers on seqs
 ;; -- ** Matchers on numbers
-;; , <
-;; , <=
-;; , >
-;; , >=
 ;; -- ** Matchers on nil
 ;; , nil?
 ;; -- ** Matcher combinators
@@ -45,10 +41,50 @@
   "matches based on equality of the value given
 
   (chartem/run-match (chartem/= 1) 1) ; => passes
-  (chartem/run-match (chartem/= 1) 2) ; => fails "
+  (chartem/run-match (chartem/= 1) 2) ; => fails"
   [a]
   {:match (fn [b] (core/= a b))
    :description (describe-list "=" [a])
+   :describe-mismatch standard-describe-mismatch})
+
+(defn <=
+  "matches based if the value given is greater-than or equal to
+
+  (chartem/run-match (chartem/<= 1) 1) ; => passes
+  (chartem/run-match (chartem/<= 1) 0) ; => fails"
+  [a]
+  {:match (fn [b] (core/<= a b))
+   :description (describe-list "<=" [a])
+   :describe-mismatch standard-describe-mismatch})
+
+(defn <
+  "matches based if the value given is greater-than or equal to
+
+  (chartem/run-match (chartem/< 1) 2) ; => passes
+  (chartem/run-match (chartem/< 1) 0) ; => fails"
+  [a]
+  {:match (fn [b] (core/< a b))
+   :description (describe-list "<" [a])
+   :describe-mismatch standard-describe-mismatch})
+
+(defn >
+  "matches based if the value given is greater-than or equal to
+
+  (chartem/run-match (chartem/> 1) 2) ; => passes
+  (chartem/run-match (chartem/> 1) 0) ; => fails"
+  [a]
+  {:match (fn [b] (core/> a b))
+   :description (describe-list ">" [a])
+   :describe-mismatch standard-describe-mismatch})
+
+(defn >=
+  "matches based if the value given is less-than or equal to
+
+  (chartem/run-match (chartem/<= 1) 1) ; => passes
+  (chartem/run-match (chartem/<= 1) 0) ; => fails"
+  [a]
+  {:match (fn [b] (core/>= a b))
+   :description (describe-list ">=" [a])
    :describe-mismatch standard-describe-mismatch})
 
 (def empty?
@@ -144,6 +180,29 @@
    :describe-mismatch
    standard-describe-mismatch})
 
+(defn not
+  "passes if the given matcher fails
+  (chartem/run-match (chartem/not (chartem/= 1)) 1) ; => passes
+  (chartem/run-match (chartem/not (chartem/= 2)) 1) ; => fails"
+  [m]
+  {:match #(core/not ((:match m) %))
+   :description (describe-list "not" [m])
+   :describe-mismatch
+   standard-describe-mismatch})
+
+(defn assert-good-matcher [{:keys [match description describe-mismatch] :as matcher}]
+  (assert (not (nil? matcher)) "Matcher should not be nil")
+  (assert match
+          (str "matcher should have a :match key. Matcher: " matcher))
+  (assert description
+          (str "matcher should have a :description key. Matcher: " matcher))
+  (assert describe-mismatch
+          (str "matcher should have a :describe-mismatch key. Matcher: " matcher))
+
+  (assert (core/= 0 (count (dissoc matcher :match :description :describe-mismatch)))
+          (str "matcher shouldn't have extra keys, but had "
+               (describe-list "" (dissoc matcher :match :description :describe-mismatch)))))
+
 (defn run-match
   "runs a matcher, given a value to match against.
   Returns a map:
@@ -158,6 +217,7 @@
 
   the results can be made human readable with (format-message result)"
   [matcher a]
+  (assert-good-matcher matcher)
   (if ((:match matcher) a)
     {:pass? true}
     {:pass? false

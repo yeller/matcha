@@ -41,3 +41,25 @@
 (deftest every?-test
   (check-successful (chartem/every? (chartem/= 1)) [1 1])
   (check-failure (chartem/every? (chartem/= 1)) [1 2]))
+
+(deftest not-test
+  (check-successful (chartem/not (chartem/= 1)) 2)
+  (check-failure (chartem/not (chartem/= 2)) 2))
+
+(deftest <=-test
+  (check-successful (chartem/<= 1) 1)
+  (check-successful (chartem/<= 1) 2)
+  (check-failure (chartem/<= 3) 2))
+
+(deftest >=-test
+  (check-successful (chartem/>= 1) 1)
+  (check-successful (chartem/>= 1) 0)
+  (check-failure (chartem/>= 1) 2))
+
+(deftest <-test
+  (check-successful (chartem/< 1) 2)
+  (check-failure (chartem/< 3) 2))
+
+(deftest >-test
+  (check-successful (chartem/> 1) 0)
+  (check-failure (chartem/> 1) 2))
