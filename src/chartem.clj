@@ -18,9 +18,6 @@
 ;;  if pass? if false
 ;;
 ;;  WIP:
-;; , every?
-;; , some
-;; , include?
 ;;  TODO: matchers list
 ;; -- ** Matchers on seqs
 ;; -- ** Matchers on numbers
@@ -142,12 +139,32 @@
          (map #((:describe-mismatch m) %)))))})
 
 (defn has-count
+  "passes if the sequence received has the given count
+  (chartem/run-match (chartem/has-count 1) [1]) ; => passes
+  (chartem/run-match (chartem/has-count 2) [])  ; => fails"
   [n]
   {:match (fn [xs] (clojure.core/= (count xs) n))
    :description (describe-list "has-count" [n])
    :describe-mismatch
    (fn [xs]
      (str "count was " (count xs)))})
+
+(defn includes
+  "passes if the sequence received includes the given item
+
+  (chartem/run-match (chartem/includes 1) [1]) ; => passes
+  (chartem/run-match (chartem/includes 1) [2]) ; => fails"
+  [x]
+  {:match
+   (fn [xs] (core/some #{x} xs))
+   :description
+   (describe-list "includes" [x])
+   :describe-mismatch
+   (fn [xs]
+     (describe-list
+       "includes"
+       (->> xs
+         (filter #(not (#{x} %))))))})
 
 (defn run-match
   "runs a matcher, given a value to match against.
