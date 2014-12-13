@@ -88,6 +88,14 @@
   (check-successful chartem/vector? [])
   (check-failure chartem/vector? 1))
 
+(deftest keyword?-test
+  (check-successful chartem/keyword? :foo)
+  (check-failure chartem/keyword? 1))
+
+(deftest symbol?-test
+  (check-successful chartem/symbol? 'foo)
+  (check-failure chartem/symbol? 1))
+
 (deftest nil?-test
   (check-successful chartem/nil? nil)
   (check-failure chartem/nil? 1))

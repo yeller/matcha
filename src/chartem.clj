@@ -3,7 +3,7 @@
     :exclude
     [empty? every?
      = some not <= >= < >
-     instance? string? map? seq? char? vector? nil?])
+     instance? string? map? seq? char? vector? nil? keyword? symbol?])
   (:require [clojure.string :as string]
             [clojure.core :as core]))
 ;; Matcher
@@ -21,18 +21,13 @@
 ;;  a match is a map with pass? and message, message will be a string
 ;;  if pass? if false
 ;;
-;;  WIP:
 ;;  TODO: matchers list
-;; -- ** Matchers on nil
-;; , nil?
 ;; -- ** Matcher combinators
 ;; , is-not
 ;; , any-of
 ;; , on
 ;; , and-also
 ;; typed matchers:
-;; int?, string? etc from core
-;; instanceof
 ;; -- ** Utility functions for writing your own matchers
 ;; , matcher-on
 ;; , match-list
@@ -255,6 +250,26 @@
   vector?
   {:match core/vector?
    :description "(vector?)"
+   :describe-mismatch describe-class-mismatch})
+
+(def
+  ^{:doc
+    "passes if the value is a keyword
+    (chartem/run-match chartem/keyword? :foo) ; => passes
+    (chartem/run-match chartem/keyword? 1) ; => fails"}
+  keyword?
+  {:match core/keyword?
+   :description "(keyword?)"
+   :describe-mismatch describe-class-mismatch})
+
+(def
+  ^{:doc
+    "passes if the value is a symbol
+    (chartem/run-match chartem/symbol? 'foo) ; => passes
+    (chartem/run-match chartem/symbol? 1) ; => fails"}
+  symbol?
+  {:match core/symbol?
+   :description "(symbol?)"
    :describe-mismatch describe-class-mismatch})
 
 (def
