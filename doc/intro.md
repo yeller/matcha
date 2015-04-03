@@ -1,3 +1,3 @@
-# Introduction to chartem
+# Introduction to matcha
 
 TODO: write [great documentation](http://jacobian.org/writing/what-to-write/)

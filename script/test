@@ -1,5 +1,5 @@
 #!/bin/bash
 
 set -e
-grench eval "(require '[chartem :reload true]) (require '[chartem_test :reload true])"
-grench eval "(do (require 'clojure.test) (clojure.test/run-all-tests #\"chartem.*\"))"
+grench eval "(require '[matcha :reload true]) (require '[matcha_test :reload true])"
+grench eval "(do (require 'clojure.test) (clojure.test/run-all-tests #\"matcha.*\"))"

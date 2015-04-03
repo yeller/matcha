@@ -1,4 +1,4 @@
-(ns chartem
+(ns matcha
   (:refer-clojure
     :exclude
     [empty? every?
@@ -52,8 +52,8 @@
 (defn =
   "matches based on equality of the value given
 
-  (chartem/run-match (chartem/= 1) 1) ; => passes
-  (chartem/run-match (chartem/= 1) 2) ; => fails"
+  (matcha/run-match (matcha/= 1) 1) ; => passes
+  (matcha/run-match (matcha/= 1) 2) ; => fails"
   [a]
   {:match (fn [b] (core/= a b))
    :description (describe-list "=" [a])
@@ -62,8 +62,8 @@
 (defn <=
   "matches based if the value given is greater-than or equal to
 
-  (chartem/run-match (chartem/<= 1) 1) ; => passes
-  (chartem/run-match (chartem/<= 1) 0) ; => fails"
+  (matcha/run-match (matcha/<= 1) 1) ; => passes
+  (matcha/run-match (matcha/<= 1) 0) ; => fails"
   [a]
   {:match (fn [b] (core/<= a b))
    :description (describe-list "<=" [a])
@@ -72,8 +72,8 @@
 (defn <
   "matches based if the value given is greater-than or equal to
 
-  (chartem/run-match (chartem/< 1) 2) ; => passes
-  (chartem/run-match (chartem/< 1) 0) ; => fails"
+  (matcha/run-match (matcha/< 1) 2) ; => passes
+  (matcha/run-match (matcha/< 1) 0) ; => fails"
   [a]
   {:match (fn [b] (core/< a b))
    :description (describe-list "<" [a])
@@ -82,8 +82,8 @@
 (defn >
   "matches based if the value given is greater-than or equal to
 
-  (chartem/run-match (chartem/> 1) 2) ; => passes
-  (chartem/run-match (chartem/> 1) 0) ; => fails"
+  (matcha/run-match (matcha/> 1) 2) ; => passes
+  (matcha/run-match (matcha/> 1) 0) ; => fails"
   [a]
   {:match (fn [b] (core/> a b))
    :description (describe-list ">" [a])
@@ -92,8 +92,8 @@
 (defn >=
   "matches based if the value given is less-than or equal to
 
-  (chartem/run-match (chartem/<= 1) 1) ; => passes
-  (chartem/run-match (chartem/<= 1) 0) ; => fails"
+  (matcha/run-match (matcha/<= 1) 1) ; => passes
+  (matcha/run-match (matcha/<= 1) 0) ; => fails"
   [a]
   {:match (fn [b] (core/>= a b))
    :description (describe-list ">=" [a])
@@ -102,8 +102,8 @@
 (def empty?
   "matches if the collection passed is empty
 
-  (chartem/run-match chartem/empty? [1]) ; => passes
-  (chartem/run-match chartem/empty? [])  ; => fails"
+  (matcha/run-match matcha/empty? [1]) ; => passes
+  (matcha/run-match matcha/empty? [])  ; => fails"
   {:match core/empty?
    :description "(empty?)"
    :describe-mismatch standard-describe-mismatch})
@@ -119,8 +119,8 @@
 (defn all-of
   "matches if all of the matchers given pass:
 
-  (chartem/run-match (chartem/all-of (chartem/= 1) (chartem/= 1)) 1) ; => passes
-  (chartem/run-match (chartem/all-of (chartem/= 1) (chartem/= 1)) 2) ; => fails"
+  (matcha/run-match (matcha/all-of (matcha/= 1) (matcha/= 1)) 1) ; => passes
+  (matcha/run-match (matcha/all-of (matcha/= 1) (matcha/= 1)) 2) ; => fails"
   [& ms]
   {:match
    (fn [a] (reduce (fn [x y] (and x y))
@@ -133,8 +133,8 @@
 (defn any-of
   "passes if any of the given matchers pass:
 
-  (chartem/run-match (chartem/any-of (chartem/= 1) (chartem/= 2)) 2) ; => passes
-  (chartem/run-match (chartem/any-of (chartem/= 3) (chartem/= 2)) 1) ; => fails"
+  (matcha/run-match (matcha/any-of (matcha/= 1) (matcha/= 2)) 2) ; => passes
+  (matcha/run-match (matcha/any-of (matcha/= 3) (matcha/= 2)) 1) ; => fails"
   [& ms]
   {:match
    (fn [a]
@@ -150,8 +150,8 @@
 (defn some
   [m]
   "passes if the matcher given passes on any of the items of the sequence this matcher receives
-  (chartem/run-match (chartem/some (chartem/= 1)) [1]) ; => passes
-  (chartem/run-match (chartem/some (chartem/= 0)) [1]) ; => fails"
+  (matcha/run-match (matcha/some (matcha/= 1)) [1]) ; => passes
+  (matcha/run-match (matcha/some (matcha/= 0)) [1]) ; => fails"
   {:match
    (fn [xs] (core/some #((:match m) %) xs))
    :description
@@ -171,8 +171,8 @@
 
 (defn has-count
   "passes if the sequence received has the given count
-  (chartem/run-match (chartem/has-count 1) [1]) ; => passes
-  (chartem/run-match (chartem/has-count 2) [])  ; => fails"
+  (matcha/run-match (matcha/has-count 1) [1]) ; => passes
+  (matcha/run-match (matcha/has-count 2) [])  ; => fails"
   [n]
   {:match (fn [xs] (clojure.core/= (count xs) n))
    :description (describe-list "has-count" [n])
@@ -182,8 +182,8 @@
 (defn includes
   "passes if the sequence received includes the given item
 
-  (chartem/run-match (chartem/includes 1) [1]) ; => passes
-  (chartem/run-match (chartem/includes 1) [2]) ; => fails"
+  (matcha/run-match (matcha/includes 1) [1]) ; => passes
+  (matcha/run-match (matcha/includes 1) [2]) ; => fails"
   [x]
   {:match
    (fn [xs] (core/some #{x} xs))
@@ -194,8 +194,8 @@
 
 (defn not
   "passes if the given matcher fails
-  (chartem/run-match (chartem/not (chartem/= 1)) 1) ; => passes
-  (chartem/run-match (chartem/not (chartem/= 2)) 1) ; => fails"
+  (matcha/run-match (matcha/not (matcha/= 1)) 1) ; => passes
+  (matcha/run-match (matcha/not (matcha/= 2)) 1) ; => fails"
   [m]
   {:match #(core/not ((:match m) %))
    :description (describe-list "not" [m])
@@ -207,8 +207,8 @@
 
 (defn instance?
   "passes if the value matches the given class
-  (chartem/run-match (chartem/instance? clojure.lang.Keyword) :foo) ; => passes
-  (chartem/run-match (chartem/instance? clojure.lang.Keyword) 1) ; => fails"
+  (matcha/run-match (matcha/instance? clojure.lang.Keyword) :foo) ; => passes
+  (matcha/run-match (matcha/instance? clojure.lang.Keyword) 1) ; => fails"
   [klazz]
   {:match #(core/instance? klazz %)
    :description (describe-list "instance?" [klazz])
@@ -217,8 +217,8 @@
 (def
   ^{:doc
     "passes if the value is a string
-    (chartem/run-match chartem/string? \"foo\") ; => passes
-    (chartem/run-match chartem/string? 1) ; => fails"}
+    (matcha/run-match matcha/string? \"foo\") ; => passes
+    (matcha/run-match matcha/string? 1) ; => fails"}
   string?
   {:match core/string?
    :description "(string?)"
@@ -227,8 +227,8 @@
 (def
   ^{:doc
     "passes if the value is a map
-    (chartem/run-match chartem/map? {}) ; => passes
-    (chartem/run-match chartem/map? 1) ; => fails"}
+    (matcha/run-match matcha/map? {}) ; => passes
+    (matcha/run-match matcha/map? 1) ; => fails"}
   map?
   {:match core/map?
    :description "(map?)"
@@ -237,8 +237,8 @@
 (def
   ^{:doc
     "passes if the value is a seq
-    (chartem/run-match chartem/seq? {}) ; => passes
-    (chartem/run-match chartem/seq? 1) ; => fails"}
+    (matcha/run-match matcha/seq? {}) ; => passes
+    (matcha/run-match matcha/seq? 1) ; => fails"}
   seq?
   {:match core/seq?
    :description "(seq?)"
@@ -247,8 +247,8 @@
 (def
   ^{:doc
     "passes if the value is a char
-    (chartem/run-match chartem/char? {}) ; => passes
-    (chartem/run-match chartem/char? 1) ; => fails"}
+    (matcha/run-match matcha/char? {}) ; => passes
+    (matcha/run-match matcha/char? 1) ; => fails"}
   char?
   {:match core/char?
    :description "(char?)"
@@ -257,8 +257,8 @@
 (def
   ^{:doc
     "passes if the value is a vector
-    (chartem/run-match chartem/vector? {}) ; => passes
-    (chartem/run-match chartem/vector? 1) ; => fails"}
+    (matcha/run-match matcha/vector? {}) ; => passes
+    (matcha/run-match matcha/vector? 1) ; => fails"}
   vector?
   {:match core/vector?
    :description "(vector?)"
@@ -267,8 +267,8 @@
 (def
   ^{:doc
     "passes if the value is a keyword
-    (chartem/run-match chartem/keyword? :foo) ; => passes
-    (chartem/run-match chartem/keyword? 1) ; => fails"}
+    (matcha/run-match matcha/keyword? :foo) ; => passes
+    (matcha/run-match matcha/keyword? 1) ; => fails"}
   keyword?
   {:match core/keyword?
    :description "(keyword?)"
@@ -277,8 +277,8 @@
 (def
   ^{:doc
     "passes if the value is a symbol
-    (chartem/run-match chartem/symbol? 'foo) ; => passes
-    (chartem/run-match chartem/symbol? 1) ; => fails"}
+    (matcha/run-match matcha/symbol? 'foo) ; => passes
+    (matcha/run-match matcha/symbol? 1) ; => fails"}
   symbol?
   {:match core/symbol?
    :description "(symbol?)"
@@ -287,8 +287,8 @@
 (def
   ^{:doc
     "passes if the value is nil
-    (chartem/run-match chartem/nil? nil) ; => passes
-    (chartem/run-match chartem/nil? 1) ; => fails"}
+    (matcha/run-match matcha/nil? nil) ; => passes
+    (matcha/run-match matcha/nil? 1) ; => fails"}
   nil?
   {:match core/nil?
    :description "(nil?)"

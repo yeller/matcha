@@ -1,4 +1,4 @@
-# chartem
+# matcha
 
 A clojure library for composable test assertions with readable error messages
 
