@@ -22,6 +22,18 @@
 ;;  if pass? if false
 ;;
 ;;  TODO: matchers list
+;;  - has-nth
+;;  - has-numerator
+;;  - has denominator
+;;  - decimal?
+;;  - float?
+;;  - rational?
+;;  - isa?
+;;  - coll?
+;;  - list?
+;;  - set?
+;;  - fn?
+;;  - re-matches
 ;; -- ** Matcher combinators
 ;; , is-not
 ;; , any-of
