@@ -23,6 +23,9 @@
 ;;  if pass? if false
 ;;
 ;;  TODO: matchers list
+;;  - has-entry
+;;  - has-key
+;;  - has-value
 (defn describe-list [call xs]
   (str "(" call " " (clojure.string/join " " xs) ")"))
 
@@ -194,6 +197,20 @@
   (matcha/run-match (matcha/has-count 2) [])  ; => fails"
   [m n]
   (on #(nth % n) m "nth value" "a collection"))
+
+(defn has-entry
+  "passes if the sequence received has the given map-entry
+
+  (matcha/run-match (matcha/has-entry [:a 1]) {:a 1}) ; => passes
+  (matcha/run-match (matcha/has-count [:a 1]) {:a 2})  ; => fails"
+  [k v]
+  {:match (fn [m] (core/= (get m k) v))
+   :description (str "a map with entry " (pr-str k) " " (pr-str v))
+   :describe-mismatch
+   (fn [m]
+     (if (core/contains? m k)
+       (str "a map with " (pr-str (get m k)) " at key " (pr-str k) " should have had " (pr-str v) " (was " (pr-str m) ")")
+       (str "a map not containing the key " (pr-str k) " (was " (pr-str m) ")")))})
 
 (defn includes
   "passes if the sequence received includes the given item
