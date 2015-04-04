@@ -6,7 +6,8 @@
      re-matches
      instance? string? map? seq? char? vector? nil? keyword? symbol? ratio? decimal? float? isa? rational? coll? set? list? fn?])
   (:require [clojure.string :as string]
-            [clojure.core :as core]))
+            [clojure.core :as core]
+            [clojure.test :as test]))
 ;; Matcher
 ;; Match
 ;;
@@ -614,3 +615,15 @@
      :expected (:description matcher)
      :was ((:describe-mismatch matcher describe-class-mismatch) a)
      :matcher matcher}))
+
+(defmacro is
+  "clojure.test integration
+
+   runs a matcher against a given value, reporting failures via clojure.test"
+  [matcher x]
+  `(let [result# (try (run-match ~matcher ~x) (catch Throwable t# t#))]
+     (if (:pass? result# false)
+       (test/report {:type :pass})
+       (if (core/instance? java.lang.Throwable result#)
+         (test/do-report {:type :error :actual result#})
+         (test/do-report {:type :fail :expected (:expected result#) :actual (:was result#)})))))
