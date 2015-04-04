@@ -75,7 +75,7 @@
   [a]
   {:match (fn [b] (core/= a b))
    :description (pr-str a)
-   :describe-mismatch standard-describe-mismatch})
+   :describe-mismatch describe-class-mismatch})
 
 (defn <=
   "matches based if the value given is greater-than or equal to
@@ -207,6 +207,40 @@
    (str "includes " (pr-str x))
    :describe-mismatch
    standard-describe-mismatch})
+
+(defn every?
+  "passes if every element of the sequence received matches the matcher
+
+  (matcha/run-match (matcha/every? (matcha/= 1)) [1]) ; => passes
+  (matcha/run-match (matcha/every? (matcha/= 1)) [2]) ; => fails"
+  [m]
+  {:match
+   (fn [xs] (core/every? (:match m) xs))
+   :description
+   (str "every item is " (:description m))
+   :describe-mismatch
+   (fn [xs]
+     (->> xs
+       (filter (complement (:match m)))
+       (map (:describe-mismatch m))
+       (string/join "an item ")))})
+
+(defn some
+  "passes if some elements of the sequence received matches the matcher
+
+  (matcha/run-match (matcha/some? (matcha/= 1)) [1 2]) ; => passes
+  (matcha/run-match (matcha/some? (matcha/= 1)) [2]) ; => fails"
+  [m]
+  {:match
+   (fn [xs] (core/some (:match m) xs))
+   :description
+   (str "some items are " (:description m))
+   :describe-mismatch
+   (fn [xs]
+     (->> xs
+       (filter (complement (:match m)))
+       (map #(str "an item " ((:describe-mismatch m) %)))
+       (string/join " ")))})
 
 (defn is-in?
   "passes if the value is included in the given collection
