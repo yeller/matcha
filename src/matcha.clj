@@ -619,7 +619,8 @@
 (defmacro is
   "clojure.test integration
 
-   runs a matcher against a given value, reporting failures via clojure.test"
+   runs a matcher against a given value, reporting failures via clojure.test
+   (just like `clojure.test/is`)"
   [matcher x]
   `(let [result# (try (run-match ~matcher ~x) (catch Throwable t# t#))]
      (if (:pass? result# false)
