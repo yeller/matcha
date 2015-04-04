@@ -21,10 +21,6 @@
 ;;
 ;;  a match is a map with pass? and message, message will be a string
 ;;  if pass? if false
-;;
-;;  TODO: matchers list
-;;  - has-key
-;;  - has-value
 (defn describe-list [call xs]
   (str "(" call " " (clojure.string/join " " xs) ")"))
 
