@@ -3,6 +3,7 @@
     :exclude
     [empty? every?
      = some not <= >= < >
+     re-matches
      instance? string? map? seq? char? vector? nil? keyword? symbol? ratio? decimal? float? isa? rational? coll? set? list? fn?])
   (:require [clojure.string :as string]
             [clojure.core :as core]))
@@ -22,8 +23,12 @@
 ;;  if pass? if false
 ;;
 ;;  TODO: matchers list
-;;  - all the matchers using `on` should have good error messages with bad types
-;;  - re-matches
+;;  - containsString
+;;  - startsWith
+;;  - endsWith
+;;  - equalIgnoringCase
+;;  - equalIgnoringWhiteSpace
+;;  - stringContainsInOrder
 (defn describe-list [call xs]
   (str "(" call " " (clojure.string/join " " xs) ")"))
 
@@ -55,7 +60,11 @@
             (and (pred x)
                  ((:match m) x)))
    :description (:description m)
-   :describe-mismatch #(str "not a " type-name ", " (describe-class-mismatch %))})
+   :describe-mismatch
+   (fn [x]
+     (if (pred x)
+       ((:describe-mismatch m describe-class-mismatch) x)
+       (str "not a " type-name ", " (describe-class-mismatch x))))})
 
 (defn =
   "matches based on equality of the value given
@@ -197,6 +206,39 @@
    (str "includes " (pr-str x))
    :describe-mismatch
    standard-describe-mismatch})
+
+(defn is-in?
+  "passes if the value is included in the given collection
+
+  (matcha/run-match (matcha/is-in? [1]) 1) ; => passes
+  (matcha/run-match (matcha/is-in? [5]) 1) ; => fails"
+  [xs]
+  {:match #(core/some #{%} xs)
+   :description (str "one of " (pr-str xs))})
+
+(defn re-matches
+  "passes if the string matches the regex given
+
+  (matcha/run-match (matcha/is-in? #\"\\d+\") \"1\") ; => passes
+  (matcha/run-match (matcha/is-in? #\"\\d+\") \"a\") ; => fails"
+  [re]
+  (type-matcher
+    core/string?
+    "string"
+    {:match #(core/re-matches re %)
+     :description (str "a string matching " (pr-str re))}))
+
+(defn contains-string
+  "passes if the string includes the given string
+
+  (matcha/run-match (matcha/contains-string \"a\") \"a\") ; => passes
+  (matcha/run-match (matcha/contains-string \"a\") \"b\") ; => fails"
+  [s]
+  (type-matcher
+    core/string?
+    "string"
+    {:match #(.contains ^String % s)
+     :description (str "a string including " (pr-str s))}))
 
 (defn not
   "passes if the given matcher fails
