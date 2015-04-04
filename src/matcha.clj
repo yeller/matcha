@@ -56,7 +56,7 @@
   (matcha/run-match (matcha/= 1) 2) ; => fails"
   [a]
   {:match (fn [b] (core/= a b))
-   :description (describe-list "=" [a])
+   :description (pr-str a)
    :describe-mismatch standard-describe-mismatch})
 
 (defn <=
@@ -66,7 +66,7 @@
   (matcha/run-match (matcha/<= 1) 0) ; => fails"
   [a]
   {:match (fn [b] (core/<= a b))
-   :description (describe-list "<=" [a])
+   :description (str "less than or equal to " (pr-str a))
    :describe-mismatch standard-describe-mismatch})
 
 (defn <
@@ -76,17 +76,17 @@
   (matcha/run-match (matcha/< 1) 0) ; => fails"
   [a]
   {:match (fn [b] (core/< a b))
-   :description (describe-list "<" [a])
+   :description (str "less than " (pr-str a))
    :describe-mismatch standard-describe-mismatch})
 
 (defn >
-  "matches based if the value given is greater-than or equal to
+  "matches based if the value given is greater-than
 
   (matcha/run-match (matcha/> 1) 2) ; => passes
   (matcha/run-match (matcha/> 1) 0) ; => fails"
   [a]
   {:match (fn [b] (core/> a b))
-   :description (describe-list ">" [a])
+   :description (str "more than " (pr-str a))
    :describe-mismatch standard-describe-mismatch})
 
 (defn >=
@@ -96,7 +96,7 @@
   (matcha/run-match (matcha/<= 1) 0) ; => fails"
   [a]
   {:match (fn [b] (core/>= a b))
-   :description (describe-list ">=" [a])
+   :description (str "less than or equal to " (pr-str a))
    :describe-mismatch standard-describe-mismatch})
 
 (def empty?
@@ -105,13 +105,14 @@
   (matcha/run-match matcha/empty? [1]) ; => passes
   (matcha/run-match matcha/empty? [])  ; => fails"
   {:match core/empty?
-   :description "(empty?)"
+   :description "an empty collection"
    :describe-mismatch standard-describe-mismatch})
 
 (defn format-message
   "turns the results of a failing match into a human readable error message,
    suitable for printing with clojure.core/print or clojure.core/println"
   [result]
+  (assert (clojure.core/not (:pass? result true)) (str "format message should only be used with a failing result, but it was given: " (pr-str result)))
   (str "\nExpected: " (:expected result)
        "\n     but: "
        (:was result)))
@@ -126,7 +127,7 @@
    (fn [a] (reduce (fn [x y] (and x y))
                           (map #((:match %) a) ms)))
    :description
-   (describe-list "all-of" (map :description ms))
+   (string/join ", and " (map :description ms))
    :describe-mismatch
    standard-describe-mismatch})
 
@@ -142,30 +143,8 @@
              (map #((:match %) a) ms)))
 
    :description
-   (describe-list "any-of" (map :description ms))
+   (string/join ", or " (map :description ms))
 
-   :describe-mismatch
-   standard-describe-mismatch})
-
-(defn some
-  [m]
-  "passes if the matcher given passes on any of the items of the sequence this matcher receives
-  (matcha/run-match (matcha/some (matcha/= 1)) [1]) ; => passes
-  (matcha/run-match (matcha/some (matcha/= 0)) [1]) ; => fails"
-  {:match
-   (fn [xs] (core/some #((:match m) %) xs))
-   :description
-   (describe-list "some" [(:description m)])
-   :describe-mismatch
-   standard-describe-mismatch})
-
-(defn every?
-  [m]
-  "passes if the matcher given passes against any of the items of the sequence the resulting matcher receives"
-  {:match
-   (fn [xs] (core/every? #((:match m) %) xs))
-   :description
-   (describe-list "every?" [(:description m)])
    :describe-mismatch
    standard-describe-mismatch})
 
@@ -175,9 +154,9 @@
   (matcha/run-match (matcha/has-count 2) [])  ; => fails"
   [n]
   {:match (fn [xs] (clojure.core/= (count xs) n))
-   :description (describe-list "has-count" [n])
+   :description (str "a collection with count " n)
    :describe-mismatch
-   standard-describe-mismatch})
+   (fn [x] (str (standard-describe-mismatch x) " with count " (count x)))})
 
 (defn includes
   "passes if the sequence received includes the given item
@@ -188,7 +167,7 @@
   {:match
    (fn [xs] (core/some #{x} xs))
    :description
-   (describe-list "includes" [x])
+   (str "includes " (pr-str x))
    :describe-mismatch
    standard-describe-mismatch})
 
@@ -198,12 +177,15 @@
   (matcha/run-match (matcha/not (matcha/= 2)) 1) ; => fails"
   [m]
   {:match #(core/not ((:match m) %))
-   :description (describe-list "not" [m])
+   :description (str "not " (:description m))
    :describe-mismatch
    standard-describe-mismatch})
 
 (defn describe-class-mismatch [x]
-  (str "was " (pr-str x) " <" (class x) ">"))
+  (str "was " (pr-str x)
+       (if (nil? x)
+         ""
+         (str " <" (class x) ">"))))
 
 (defn instance?
   "passes if the value matches the given class
@@ -211,8 +193,7 @@
   (matcha/run-match (matcha/instance? clojure.lang.Keyword) 1) ; => fails"
   [klazz]
   {:match #(core/instance? klazz %)
-   :description (describe-list "instance?" [klazz])
-   :describe-mismatch describe-class-mismatch})
+   :description (str "an instance of " (.getName ^java.lang.Class klazz))})
 
 (def
   ^{:doc
@@ -221,8 +202,7 @@
     (matcha/run-match matcha/string? 1) ; => fails"}
   string?
   {:match core/string?
-   :description "(string?)"
-   :describe-mismatch describe-class-mismatch})
+   :description "a string"})
 
 (def
   ^{:doc
@@ -231,8 +211,7 @@
     (matcha/run-match matcha/map? 1) ; => fails"}
   map?
   {:match core/map?
-   :description "(map?)"
-   :describe-mismatch describe-class-mismatch})
+   :description "a map"})
 
 (def
   ^{:doc
@@ -241,8 +220,7 @@
     (matcha/run-match matcha/seq? 1) ; => fails"}
   seq?
   {:match core/seq?
-   :description "(seq?)"
-   :describe-mismatch describe-class-mismatch})
+   :description "a sequence"})
 
 (def
   ^{:doc
@@ -251,8 +229,7 @@
     (matcha/run-match matcha/char? 1) ; => fails"}
   char?
   {:match core/char?
-   :description "(char?)"
-   :describe-mismatch describe-class-mismatch})
+   :description "a character"})
 
 (def
   ^{:doc
@@ -261,8 +238,7 @@
     (matcha/run-match matcha/vector? 1) ; => fails"}
   vector?
   {:match core/vector?
-   :description "(vector?)"
-   :describe-mismatch describe-class-mismatch})
+   :description "a vector"})
 
 (def
   ^{:doc
@@ -271,8 +247,7 @@
     (matcha/run-match matcha/keyword? 1) ; => fails"}
   keyword?
   {:match core/keyword?
-   :description "(keyword?)"
-   :describe-mismatch describe-class-mismatch})
+   :description "a keyword"})
 
 (def
   ^{:doc
@@ -281,8 +256,7 @@
     (matcha/run-match matcha/symbol? 1) ; => fails"}
   symbol?
   {:match core/symbol?
-   :description "(symbol?)"
-   :describe-mismatch describe-class-mismatch})
+   :description "a symbol"})
 
 (def
   ^{:doc
@@ -291,8 +265,7 @@
     (matcha/run-match matcha/nil? 1) ; => fails"}
   nil?
   {:match core/nil?
-   :description "(nil?)"
-   :describe-mismatch describe-class-mismatch})
+   :description "nil"})
 
 (defn assert-good-matcher [{:keys [match description describe-mismatch] :as matcher}]
   (assert (not (nil? matcher)) "Matcher should not be nil")
@@ -300,8 +273,6 @@
           (str "matcher should have a :match key. Matcher: " matcher))
   (assert description
           (str "matcher should have a :description key. Matcher: " matcher))
-  (assert describe-mismatch
-          (str "matcher should have a :describe-mismatch key. Matcher: " matcher))
 
   (assert (core/= 0 (count (dissoc matcher :match :description :describe-mismatch)))
           (str "matcher shouldn't have extra keys, but had "
@@ -316,8 +287,9 @@
 
   if the matcher fails:
   {:pass? false
-  :expected (a string)
-  :was (a string)}
+   :matcher matcher
+   :expected (a string)
+   :was (a string)}
 
   the results can be made human readable with (format-message result)"
   [matcher a]
@@ -326,4 +298,5 @@
     {:pass? true}
     {:pass? false
      :expected (:description matcher)
-     :was ((:describe-mismatch matcher) a)}))
+     :was ((:describe-mismatch matcher describe-class-mismatch) a)
+     :matcher matcher}))
