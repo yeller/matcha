@@ -3,7 +3,7 @@
     :exclude
     [empty? every?
      = some not <= >= < >
-     instance? string? map? seq? char? vector? nil? keyword? symbol?])
+     instance? string? map? seq? char? vector? nil? keyword? symbol? ratio? decimal? float? isa? rational? coll? set? list?])
   (:require [clojure.string :as string]
             [clojure.core :as core]))
 ;; Matcher
@@ -22,31 +22,43 @@
 ;;  if pass? if false
 ;;
 ;;  TODO: matchers list
-;;  - has-numerator
-;;  - has denominator
-;;  - decimal?
-;;  - float?
-;;  - rational?
-;;  - isa?
-;;  - coll?
-;;  - list?
-;;  - set?
+;;  - all the matchers using `on` should have good error messages with bad types
 ;;  - fn?
 ;;  - re-matches
 ;; -- ** Matcher combinators
-;; , is-not
-;; , any-of
-;; , on
 ;; , and-also
-;; typed matchers:
-;; -- ** Utility functions for writing your own matchers
-;; , matcher-on
-;; , match-list
 (defn describe-list [call xs]
   (str "(" call " " (clojure.string/join " " xs) ")"))
 
 (defn standard-describe-mismatch [x]
-  (str "was " (pr-str x)))
+  (pr-str x))
+
+(defn describe-mismatch-feature [x feature-name feature-mismatch]
+  (str (standard-describe-mismatch x) " with " feature-name " " feature-mismatch))
+
+(defn on
+  "combinator. Passes if the (f the-value) matches the matcher"
+  ([f m feature-name]
+   (on f m feature-name "something"))
+  ([f m feature-name class-name]
+   {:match
+    (fn [a]
+      ((:match m) (f a)))
+    :description
+    (str class-name " with " feature-name " " (:description m))
+    :describe-mismatch
+    (fn [a]
+      (describe-mismatch-feature a feature-name ((:describe-mismatch m) (f a)))) }))
+
+(defn type-matcher
+  "checks the value matches a predicate before matching
+  using the matcher given."
+  [pred type-name m]
+  {:match (fn match [x]
+            (and (pred x)
+                 ((:match m) x)))
+   :description (:description m)
+   :describe-mismatch #(str "not a " type-name ", " (describe-class-mismatch %))})
 
 (defn =
   "matches based on equality of the value given
@@ -95,8 +107,27 @@
   (matcha/run-match (matcha/<= 1) 0) ; => fails"
   [a]
   {:match (fn [b] (core/>= a b))
-   :description (str "less than or equal to " (pr-str a))
-   :describe-mismatch standard-describe-mismatch})
+   :description (str "less than or equal to " (pr-str a))})
+
+(defn has-numerator
+  "passes if the ratio has the numerator given
+   (matcha/run-match (matcha/has-numerator 1) 1/10) ; => passes
+   (matcha/run-match matcha/nil? 1) ; => fails"
+  [n]
+  (type-matcher
+    core/ratio?
+    "a ratio"
+    (on numerator (= n) "numerator" "a number")))
+
+(defn has-denominator
+  "passes if the ratio has the denominator given
+   (matcha/run-match (matcha/has-numerator 1) 1/10) ; => passes
+   (matcha/run-match matcha/nil? 1) ; => fails"
+  [n]
+  (type-matcher
+    core/ratio?
+    "a ratio"
+    (on denominator (= n) "denominator" "a number")))
 
 (def empty?
   "matches if the collection passed is empty
@@ -104,8 +135,7 @@
   (matcha/run-match matcha/empty? [1]) ; => passes
   (matcha/run-match matcha/empty? [])  ; => fails"
   {:match core/empty?
-   :description "an empty collection"
-   :describe-mismatch standard-describe-mismatch})
+   :description "an empty collection"})
 
 (defn format-message
   "turns the results of a failing match into a human readable error message,
@@ -113,7 +143,7 @@
   [result]
   (assert (clojure.core/not (:pass? result true)) (str "format message should only be used with a failing result, but it was given: " (pr-str result)))
   (str "\nExpected: " (:expected result)
-       "\n     but: "
+       "\n but was: "
        (:was result)))
 
 (defn all-of
@@ -126,9 +156,7 @@
    (fn [a] (reduce (fn [x y] (and x y))
                           (map #((:match %) a) ms)))
    :description
-   (string/join ", and " (map :description ms))
-   :describe-mismatch
-   standard-describe-mismatch})
+   (string/join ", and " (map :description ms))})
 
 (defn any-of
   "passes if any of the given matchers pass:
@@ -142,20 +170,14 @@
              (map #((:match %) a) ms)))
 
    :description
-   (string/join ", or " (map :description ms))
-
-   :describe-mismatch
-   standard-describe-mismatch})
+   (string/join ", or " (map :description ms))})
 
 (defn has-count
   "passes if the sequence received has the given count
   (matcha/run-match (matcha/has-count 1) [1]) ; => passes
   (matcha/run-match (matcha/has-count 2) [])  ; => fails"
   [n]
-  {:match (fn [xs] (clojure.core/= (count xs) n))
-   :description (str "a collection with count " n)
-   :describe-mismatch
-   (fn [x] (str (standard-describe-mismatch x) " with count " (count x)))})
+  (on count (= n) "count" "a collection"))
 
 (defn has-nth
   "passes if the sequence received has the value matching the matcher given at
@@ -164,10 +186,7 @@
   (matcha/run-match (matcha/has-count 1) [1]) ; => passes
   (matcha/run-match (matcha/has-count 2) [])  ; => fails"
   [m n]
-  {:match (fn [xs] ((:match m) (nth xs n)))
-   :description (str "a collection with the nth value " (:description m))
-   :describe-mismatch
-   (fn [x] (str (standard-describe-mismatch x) " with nth value " ((:describe-mismatch m) (nth x n))))})
+  (on #(nth % n) m "nth value" "a collection"))
 
 (defn includes
   "passes if the sequence received includes the given item
@@ -205,6 +224,15 @@
   [klazz]
   {:match #(core/instance? klazz %)
    :description (str "an instance of " (.getName ^java.lang.Class klazz))})
+
+(defn isa?
+  "passes if the value isa? the given object
+
+  (matcha/run-match (matcha/isa? :parent) :child) ; => passes
+  (matcha/run-match (matcha/isa? :child) :child) ; => fails"
+  [parent]
+  {:match #(core/isa? % parent)
+   :description (str "something with a parent of " parent)})
 
 (def
   ^{:doc
@@ -277,6 +305,76 @@
   nil?
   {:match core/nil?
    :description "nil"})
+
+(def
+  ^{:doc
+    "passes if the value is a ratio
+
+    (matcha/run-match matcha/ratio? 1/5) ; => passes
+    (matcha/run-match matcha/ratio? 5) ; => fails"}
+  ratio?
+  {:match core/ratio?
+   :description "a ratio"})
+
+(def
+  ^{:doc
+    "passes if the value is a decimal
+
+    (matcha/run-match matcha/decimal? bigdec 1)) ; => passes
+    (matcha/run-match matcha/decimal? 5) ; => fails"}
+  decimal?
+  {:match core/decimal?
+   :description "a decimal"})
+
+(def
+  ^{:doc
+    "passes if the value is a rational
+
+    (matcha/run-match matcha/rational? 1) ; => passes
+    (matcha/run-match matcha/rational? \"a\") ; => fails"}
+  rational?
+  {:match core/rational?
+   :description "a rational"})
+
+(def
+  ^{:doc
+    "passes if the value is a float
+
+    (matcha/run-match matcha/float? (float 1.0)) ; => passes
+    (matcha/run-match matcha/float? 5) ; => fails"}
+  float?
+  {:match core/float?
+   :description "a float"})
+
+(def
+  ^{:doc
+    "passes if the value is a collection
+
+    (matcha/run-match matcha/coll? []) ; => passes
+    (matcha/run-match matcha/coll? 5) ; => fails"}
+  coll?
+  {:match core/coll?
+   :description "a collection"})
+
+(def
+  ^{:doc
+    "passes if the value is a list
+
+    (matcha/run-match matcha/list? '()) ; => passes
+    (matcha/run-match matcha/list? 5) ; => fails"}
+  list?
+  {:match core/list?
+   :description "a list"})
+
+(def
+  ^{:doc
+    "passes if the value is a set
+
+    (matcha/run-match matcha/set? #{}) ; => passes
+    (matcha/run-match matcha/set? 5) ; => fails"}
+  set?
+  {:match core/set?
+   :description "a set"})
 
 (defn assert-good-matcher [{:keys [match description describe-mismatch] :as matcher}]
   (assert (not (nil? matcher)) "Matcher should not be nil")

@@ -6,7 +6,7 @@
   "asserts that a given matcher succeeds, given a value"
   [matcher a]
   (let [result (matcha/run-match matcher a)]
-    (clojure.test/is (:pass? result) (str "matcha:\n" (matcha/format-message result)))))
+    (clojure.test/is (:pass? result))))
 
 (defn check-failure
   "asserts that a given matcher fails given a value"
@@ -33,14 +33,6 @@
 (deftest has-count
   (check-successful (matcha/has-count 0) [])
   (check-failure (matcha/has-count 1) []))
-
-(deftest some-test
-  (check-successful (matcha/some (matcha/= 1)) [1])
-  (check-failure (matcha/some (matcha/= 2)) [1]))
-
-(deftest every?-test
-  (check-successful (matcha/every? (matcha/= 1)) [1 1])
-  (check-failure (matcha/every? (matcha/= 1)) [1 2]))
 
 (deftest not-test
   (check-successful (matcha/not (matcha/= 1)) 2)
