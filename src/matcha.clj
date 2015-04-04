@@ -23,17 +23,18 @@
 ;;  if pass? if false
 ;;
 ;;  TODO: matchers list
-;;  - containsString
-;;  - startsWith
-;;  - endsWith
-;;  - equalIgnoringCase
-;;  - equalIgnoringWhiteSpace
-;;  - stringContainsInOrder
 (defn describe-list [call xs]
   (str "(" call " " (clojure.string/join " " xs) ")"))
 
 (defn standard-describe-mismatch [x]
   (pr-str x))
+
+(defn describe-class-mismatch [x]
+  (str (pr-str x)
+       (if (clojure.core/nil? x)
+         ""
+         (str " <" (class x) ">"))))
+
 
 (defn describe-mismatch-feature [x feature-name feature-mismatch]
   (str (standard-describe-mismatch x) " with " feature-name " " feature-mismatch))
@@ -240,6 +241,79 @@
     {:match #(.contains ^String % s)
      :description (str "a string including " (pr-str s))}))
 
+(defn starts-with
+  "passes if the string starts with the given string
+
+  (matcha/run-match (matcha/starts-with \"a\") \"ab\") ; => passes
+  (matcha/run-match (matcha/starts-with \"a\") \"ba\") ; => fails"
+  [s]
+  (type-matcher
+    core/string?
+    "string"
+    {:match #(.startsWith ^String % s)
+     :description (str "a string starting with " (pr-str s))}))
+
+(defn ends-with
+  "passes if the string ends with the given string
+
+  (matcha/run-match (matcha/ends-with \"a\") \"ba\") ; => passes
+  (matcha/run-match (matcha/ends-with \"a\") \"ab\") ; => fails"
+  [s]
+  (type-matcher
+    core/string?
+    "string"
+    {:match #(.endsWith ^String % s)
+     :description (str "a string ending with " (pr-str s))}))
+
+(defn equal-ignoring-case
+  "passes if the string is equal to the other string ignoring case
+
+  (matcha/run-match (matcha/equal-ignoring-case \"a\") \"A\") ; => passes
+  (matcha/run-match (matcha/equal-ignoring-case \"a\") \"ab\") ; => fails"
+  [s]
+  (type-matcher
+    core/string?
+    "string"
+    (on #(.toLowerCase ^String %) (= (.toLowerCase ^String s)) "lower case" "string")))
+
+(defn equal-ignoring-whitespace
+  "passes if the string is equal to the other string ignoring whitespace
+
+  (matcha/run-match (matcha/equal-ignoring-whitespace \"a\") \"a \") ; => passes
+  (matcha/run-match (matcha/equal-ignoring-whitespace \"a \") \"ab\") ; => fails"
+  [s]
+  (type-matcher
+    core/string?
+    "string"
+    (on #(.replaceAll ^String % "\\s+" "")
+        (= (.replaceAll ^String s "\\s+" ""))
+        "without whitespace"
+        "string")))
+
+(defn contains-in-order-matches [given-string strings]
+  (reduce
+    (fn [prev-index string]
+      (let [index (.indexOf ^String given-string string prev-index)]
+        (if (core/= index -1)
+          (reduced false)
+          index)))
+    0
+    strings))
+
+(defn contains-in-order
+  "passes if the string contains the strings in order
+
+  (matcha/run-match (matcha/contains-in-order \"a\" \"b\") \"ab\") ; => passes
+  (matcha/run-match (matcha/contains-in-order \"a\" \"b\") \"ac\") ; => fails"
+  [& strings]
+  (type-matcher
+    core/string?
+    "string"
+    {:match
+     (fn [given-string]
+       (contains-in-order-matches given-string strings))
+     :description (str "a string containing " (string/join ", " (map pr-str strings)) " in order")}))
+
 (defn not
   "passes if the given matcher fails
   (matcha/run-match (matcha/not (matcha/= 1)) 1) ; => passes
@@ -249,12 +323,6 @@
    :description (str "not " (:description m))
    :describe-mismatch
    standard-describe-mismatch})
-
-(defn describe-class-mismatch [x]
-  (str "was " (pr-str x)
-       (if (clojure.core/nil? x)
-         ""
-         (str " <" (class x) ">"))))
 
 (defn instance?
   "passes if the value matches the given class
