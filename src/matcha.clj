@@ -22,7 +22,6 @@
 ;;  if pass? if false
 ;;
 ;;  TODO: matchers list
-;;  - has-nth
 ;;  - has-numerator
 ;;  - has denominator
 ;;  - decimal?
@@ -158,6 +157,18 @@
    :describe-mismatch
    (fn [x] (str (standard-describe-mismatch x) " with count " (count x)))})
 
+(defn has-nth
+  "passes if the sequence received has the value matching the matcher given at
+  (nth n)
+
+  (matcha/run-match (matcha/has-count 1) [1]) ; => passes
+  (matcha/run-match (matcha/has-count 2) [])  ; => fails"
+  [m n]
+  {:match (fn [xs] ((:match m) (nth xs n)))
+   :description (str "a collection with the nth value " (:description m))
+   :describe-mismatch
+   (fn [x] (str (standard-describe-mismatch x) " with nth value " ((:describe-mismatch m) (nth x n))))})
+
 (defn includes
   "passes if the sequence received includes the given item
 
@@ -183,7 +194,7 @@
 
 (defn describe-class-mismatch [x]
   (str "was " (pr-str x)
-       (if (nil? x)
+       (if (clojure.core/nil? x)
          ""
          (str " <" (class x) ">"))))
 
