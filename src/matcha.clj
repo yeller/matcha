@@ -239,7 +239,19 @@
    :description (str "a map with val " (pr-str v))
    :describe-mismatch
    (fn [m]
-     (str "vals: " (vals m) " (was " (pr-str m) ")"))})
+     (str "vals: " (string/join ", " (vals m)) " (was " (pr-str m) ")"))})
+
+(defn has-key
+  "passes if the map received has the given key
+
+  (matcha/run-match (matcha/has-key 1) {:a 1}) ; => passes
+  (matcha/run-match (matcha/has-key 1) {:a 2})  ; => fails"
+  [v]
+  {:match (fn [m] (core/some #{v} (keys m)))
+   :description (str "a map with key " (pr-str v))
+   :describe-mismatch
+   (fn [m]
+     (str "keys: " (string/join ", " (keys m)) " (was " (pr-str m) ")"))})
 
 (defn includes
   "passes if the sequence received includes the given item
