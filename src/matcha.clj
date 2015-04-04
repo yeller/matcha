@@ -3,7 +3,7 @@
     :exclude
     [empty? every?
      = some not <= >= < >
-     instance? string? map? seq? char? vector? nil? keyword? symbol? ratio? decimal? float? isa? rational? coll? set? list?])
+     instance? string? map? seq? char? vector? nil? keyword? symbol? ratio? decimal? float? isa? rational? coll? set? list? fn?])
   (:require [clojure.string :as string]
             [clojure.core :as core]))
 ;; Matcher
@@ -23,10 +23,7 @@
 ;;
 ;;  TODO: matchers list
 ;;  - all the matchers using `on` should have good error messages with bad types
-;;  - fn?
 ;;  - re-matches
-;; -- ** Matcher combinators
-;; , and-also
 (defn describe-list [call xs]
   (str "(" call " " (clojure.string/join " " xs) ")"))
 
@@ -375,6 +372,16 @@
   set?
   {:match core/set?
    :description "a set"})
+
+(def
+  ^{:doc
+    "passes if the value is a function
+
+    (matcha/run-match matcha/fn? #()) ; => passes
+    (matcha/run-match matcha/fn? 5) ; => fails"}
+  fn?
+  {:match core/fn?
+   :description "a function"})
 
 (defn assert-good-matcher [{:keys [match description describe-mismatch] :as matcher}]
   (assert (not (nil? matcher)) "Matcher should not be nil")
