@@ -185,6 +185,13 @@
   [n]
   (on count (= n) "count" "a collection"))
 
+(defn has-count-that
+  "passes if the sequence received has the given count
+  (matcha/run-match (matcha/has-count-that (matcha/= 1)) [1]) ; => passes
+  (matcha/run-match (matcha/has-count-that (matcha/= 1)) [])  ; => fails"
+  [m]
+  (on count m "count" "a collection"))
+
 (defn has-nth
   "passes if the sequence received has the value matching the matcher given at
   (nth n)
