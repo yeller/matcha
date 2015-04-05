@@ -7,7 +7,8 @@
      instance? string? map? seq? char? vector? nil? keyword? symbol? ratio? decimal? float? isa? rational? coll? set? list? fn?])
   (:require [clojure.string :as string]
             [clojure.core :as core]
-            [clojure.test :as test]))
+            [clojure.test :as test]
+            [clojure.data :as data]))
 ;; Matcher
 ;; Match
 ;;
@@ -74,7 +75,12 @@
   [a]
   {:match (fn [b] (core/= a b))
    :description (pr-str a)
-   :describe-mismatch describe-class-mismatch})
+   :describe-mismatch
+   (fn [x]
+     (let [[things-in-a things-in-x things-in-both] (data/diff a x)]
+       (str (describe-class-mismatch x)
+         "\n+" (pr-str things-in-a)
+         "\n-" (pr-str things-in-x))))})
 
 (defn <=
   "matches based if the value given is greater-than or equal to
@@ -587,7 +593,7 @@
     (matcha/run-match matcha/truthy? nil) ; => fails"}
   truthy?
   {:match identity
-   :description "a set"})
+   :description "a truthy value"})
 
 (def
   ^{:doc
@@ -597,7 +603,7 @@
     (matcha/run-match matcha/falsey? nil) ; => fails"}
   falsey?
   {:match not
-   :description "a set"})
+   :description "a falsey value"})
 
 (def
   ^{:doc
