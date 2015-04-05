@@ -581,6 +581,26 @@
 
 (def
   ^{:doc
+    "passes if the value is truthy
+
+    (matcha/run-match matcha/truthy? #{}) ; => passes
+    (matcha/run-match matcha/truthy? nil) ; => fails"}
+  truthy?
+  {:match identity
+   :description "a set"})
+
+(def
+  ^{:doc
+    "passes if the value is falsey
+
+    (matcha/run-match matcha/falsey? #{}) ; => passes
+    (matcha/run-match matcha/falsey? nil) ; => fails"}
+  falsey?
+  {:match not
+   :description "a set"})
+
+(def
+  ^{:doc
     "passes if the value is a function
 
     (matcha/run-match matcha/fn? #()) ; => passes
