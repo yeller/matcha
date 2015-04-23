@@ -11,6 +11,22 @@
             [clojure.data :as data]
             [clojure.pprint :as pprint]))
 
+(defprotocol Matcher
+  (match [this a] "returns a truthy value if the matcher matches the given value")
+  (description [this] "returns a human readable description of the matcher")
+  (describe-mismatch [this a] "returns a human readable string of the mismatch of the matcher and the value given. It is an *error* to call describe-mismatch without checking match first, and you should expect unspecified behavior, exceptions, and so on."))
+
+(defrecord RecordMatcher [match description describe-mismatch]
+  Matcher
+  (match [this a] ((:match this) a))
+  (description [this] description)
+  (describe-mismatch [this a] ((or (:describe-mismatch this) describe-class-mismatch) a)))
+
+(defn make-record-matcher
+  ([match description] (make-record-matcher match description describe-class-mismatch))
+  ([match description describe-mismatch]
+   (->RecordMatcher match description describe-mismatch)))
+
 (defn describe-list [call xs]
   (str "(" call " " (clojure.string/join " " xs) ")"))
 
@@ -26,37 +42,38 @@
          ""
          (str " <" (class x) ">"))))
 
+(extend-protocol Matcher java.util.Map
+  (match [this a] ((:match this) a))
+  (description [this] (:description this))
+  (describe-mismatch [this a] ((:describe-mismatch this describe-class-mismatch) a)))
+
 (defn describe-mismatch-feature [x feature-name feature-mismatch]
   (str (standard-describe-mismatch x) " with " feature-name " " feature-mismatch))
-
 
 (defn on
   "combinator. Passes if the (f the-value) matches the matcher"
   ([f m feature-name]
    (on f m feature-name "something"))
   ([f m feature-name class-name]
-   {:match
-    (fn [a]
-      ((:match m) (f a)))
-    :description
-    (str class-name " with " feature-name " " (:description m))
-    :describe-mismatch
-    (fn [a]
-      (describe-mismatch-feature a feature-name ((:describe-mismatch m) (f a)))) }))
+   (make-record-matcher
+     (fn [a] ((:match m) (f a)))
+     (str class-name " with " feature-name " " (:description m))
+     (fn [a]
+       (describe-mismatch-feature a feature-name ((:describe-mismatch m) (f a)))) )))
 
 (defn type-matcher
   "checks the value matches a predicate before matching
   using the matcher given."
   [pred type-name m]
-  {:match (fn match [x]
-            (and (pred x)
-                 ((:match m) x)))
-   :description (:description m)
-   :describe-mismatch
-   (fn [x]
-     (if (pred x)
-       ((:describe-mismatch m describe-class-mismatch) x)
-       (str "not a " type-name ", " (describe-class-mismatch x))))})
+  (make-record-matcher
+    (fn match [x]
+      (and (pred x)
+           ((:match m) x)))
+    (:description m)
+    (fn [x]
+      (if (pred x)
+        ((:describe-mismatch m describe-class-mismatch) x)
+        (str "not a " type-name ", " (describe-class-mismatch x))))))
 
 (defn =
   "matches based on equality of the value given
@@ -64,18 +81,18 @@
   (matcha/run-match (matcha/= 1) 1) ; => passes
   (matcha/run-match (matcha/= 1) 2) ; => fails"
   [a]
-  {:match (fn [b] (core/= a b))
-   :description (pr-str a)
-   :describe-mismatch
-   (fn [x]
-     (let [[things-in-a things-in-x things-in-both] (data/diff a x)]
-       (str (describe-class-mismatch x)
-            (if (not= things-in-a things-in-x)
-              (str
+  (make-record-matcher
+    (fn [b] (core/= a b))
+    (pr-str a)
+    (fn [x]
+      (let [[things-in-a things-in-x things-in-both] (data/diff a x)]
+        (str (describe-class-mismatch x)
+             (if (not= things-in-a things-in-x)
+               (str
 
-                "\n    diff:"
-                "\n       +: " (pp things-in-a)
-                "\n       -: " (pp things-in-x))))))})
+                 "\n    diff:"
+                 "\n       +: " (pp things-in-a)
+                 "\n       -: " (pp things-in-x))))))))
 
 (defn <=
   "matches based if the value given is greater-than or equal to
@@ -83,9 +100,10 @@
   (matcha/run-match (matcha/<= 1) 1) ; => passes
   (matcha/run-match (matcha/<= 1) 0) ; => fails"
   [a]
-  {:match (fn [b] (core/<= a b))
-   :description (str "less than or equal to " (pr-str a))
-   :describe-mismatch standard-describe-mismatch})
+  (make-record-matcher
+    (fn [b] (core/<= a b))
+    (str "less than or equal to " (pr-str a))
+    standard-describe-mismatch))
 
 (defn <
   "matches based if the value given is greater-than or equal to
@@ -93,9 +111,10 @@
   (matcha/run-match (matcha/< 1) 2) ; => passes
   (matcha/run-match (matcha/< 1) 0) ; => fails"
   [a]
-  {:match (fn [b] (core/< a b))
-   :description (str "less than " (pr-str a))
-   :describe-mismatch standard-describe-mismatch})
+  (make-record-matcher
+    (fn [b] (core/< a b))
+    (str "less than " (pr-str a))
+    standard-describe-mismatch))
 
 (defn >
   "matches based if the value given is greater-than
@@ -103,9 +122,10 @@
   (matcha/run-match (matcha/> 1) 2) ; => passes
   (matcha/run-match (matcha/> 1) 0) ; => fails"
   [a]
-  {:match (fn [b] (core/> a b))
-   :description (str "more than " (pr-str a))
-   :describe-mismatch standard-describe-mismatch})
+  (make-record-matcher
+    (fn [b] (core/> a b))
+    (str "more than " (pr-str a))
+    describe-class-mismatch))
 
 (defn >=
   "matches based if the value given is less-than or equal to
@@ -113,13 +133,15 @@
   (matcha/run-match (matcha/<= 1) 1) ; => passes
   (matcha/run-match (matcha/<= 1) 0) ; => fails"
   [a]
-  {:match (fn [b] (core/>= a b))
-   :description (str "less than or equal to " (pr-str a))})
+  (make-record-matcher
+    (fn [b] (core/>= a b))
+    (str "less than or equal to " (pr-str a))
+    describe-class-mismatch))
 
 (defn has-numerator
   "passes if the ratio has the numerator given
-   (matcha/run-match (matcha/has-numerator 1) 1/10) ; => passes
-   (matcha/run-match matcha/nil? 1) ; => fails"
+  (matcha/run-match (matcha/has-numerator 1) 1/10) ; => passes
+  (matcha/run-match matcha/nil? 1) ; => fails"
   [n]
   (type-matcher
     core/ratio?
@@ -128,8 +150,8 @@
 
 (defn has-denominator
   "passes if the ratio has the denominator given
-   (matcha/run-match (matcha/has-numerator 1) 1/10) ; => passes
-   (matcha/run-match matcha/nil? 1) ; => fails"
+  (matcha/run-match (matcha/has-numerator 1) 1/10) ; => passes
+  (matcha/run-match matcha/nil? 1) ; => fails"
   [n]
   (type-matcher
     core/ratio?
@@ -141,12 +163,13 @@
 
   (matcha/run-match matcha/empty? [1]) ; => passes
   (matcha/run-match matcha/empty? [])  ; => fails"
-  {:match core/empty?
-   :description "an empty collection"})
+  (make-record-matcher
+    core/empty?
+    "an empty collection"))
 
 (defn format-message
   "turns the results of a failing match into a human readable error message,
-   suitable for printing with clojure.core/print or clojure.core/println"
+  suitable for printing with clojure.core/print or clojure.core/println"
   [result]
   (assert (clojure.core/not (:pass? result true)) (str "format message should only be used with a failing result, but it was given: " (pr-str result)))
   (str "\nExpected: " (:expected result)
@@ -159,11 +182,10 @@
   (matcha/run-match (matcha/all-of (matcha/= 1) (matcha/= 1)) 1) ; => passes
   (matcha/run-match (matcha/all-of (matcha/= 1) (matcha/= 1)) 2) ; => fails"
   [& ms]
-  {:match
-   (fn [a] (reduce (fn [x y] (and x y))
-                          (map #((:match %) a) ms)))
-   :description
-   (string/join ", and " (map :description ms))})
+  (make-record-matcher
+    (fn [a] (reduce (fn [x y] (and x y))
+                    (map #((:match %) a) ms)))
+    (string/join ", and " (map :description ms))))
 
 (defn any-of
   "passes if any of the given matchers pass:
@@ -171,13 +193,12 @@
   (matcha/run-match (matcha/any-of (matcha/= 1) (matcha/= 2)) 2) ; => passes
   (matcha/run-match (matcha/any-of (matcha/= 3) (matcha/= 2)) 1) ; => fails"
   [& ms]
-  {:match
-   (fn [a]
-     (reduce (fn [x y] (or x y))
-             (map #((:match %) a) ms)))
+  (make-record-matcher
+    (fn [a]
+      (reduce (fn [x y] (or x y))
+              (map #((:match %) a) ms)))
 
-   :description
-   (string/join ", or " (map :description ms))})
+    (string/join ", or " (map :description ms))))
 
 (defn has-count
   "passes if the sequence received has the given count
@@ -208,13 +229,13 @@
   (matcha/run-match (matcha/has-entry :a 1) {:a 1}) ; => passes
   (matcha/run-match (matcha/has-entry :a 1) {:a 2})  ; => fails"
   [k v]
-  {:match (fn [m] (core/= (get m k) v))
-   :description (str "a map with entry " (pr-str k) " " (pr-str v))
-   :describe-mismatch
-   (fn [m]
-     (if (core/contains? m k)
-       (str "a map with " (pr-str (get m k)) " at key " (pr-str k) " should have had " (pr-str v) " (was " (pr-str m) ")")
-       (str "a map not containing the key " (pr-str k) " (was " (pr-str m) ")")))})
+  (make-record-matcher
+    (fn [m] (core/= (get m k) v))
+    (str "a map with entry " (pr-str k) " " (pr-str v))
+    (fn [m]
+      (if (core/contains? m k)
+        (str "a map with " (pr-str (get m k)) " at key " (pr-str k) " should have had " (pr-str v) " (was " (pr-str m) ")")
+        (str "a map not containing the key " (pr-str k) " (was " (pr-str m) ")")))))
 
 (defn has-entry-that
   "passes if the map received has a value at the key given that matches the matcher
@@ -222,17 +243,17 @@
   (matcha/run-match (matcha/has-entry-that :a (matcha/= 1)) {:a 1}) ; => passes
   (matcha/run-match (matcha/has-entry-that :a (matcha/= 2)) {:a 2})  ; => fails"
   [k matcher]
-  {:match (fn [m] ((:match matcher) (get m k)))
-   :description (str "a map with entry " (pr-str k) " that " (:description matcher))
-   :describe-mismatch
-   (fn [m]
-     (if (core/contains? m k)
-       (str "a map with "
-            ((:describe-mismatch matcher describe-class-mismatch) (get m k))
-            " at key "
-            (pr-str k)
-            " (was " (pr-str m) ")")
-       (str "a map not containing the key " (pr-str k) " (was " (pr-str m) ")")))})
+  (make-record-matcher
+    (fn [m] ((:match matcher) (get m k)))
+    (str "a map with entry " (pr-str k) " that " (:description matcher))
+    (fn [m]
+      (if (core/contains? m k)
+        (str "a map with "
+             ((:describe-mismatch matcher describe-class-mismatch) (get m k))
+             " at key "
+             (pr-str k)
+             " (was " (pr-str m) ")")
+        (str "a map not containing the key " (pr-str k) " (was " (pr-str m) ")")))))
 
 (defn has-val
   "passes if the map received has the given val
@@ -240,11 +261,11 @@
   (matcha/run-match (matcha/has-val 1) {:a 1}) ; => passes
   (matcha/run-match (matcha/has-val 1) {:a 2})  ; => fails"
   [v]
-  {:match (fn [m] (core/some #{v} (vals m)))
-   :description (str "a map with val " (pr-str v))
-   :describe-mismatch
-   (fn [m]
-     (str "vals: " (string/join ", " (vals m)) " (was " (pr-str m) ")"))})
+  (make-record-matcher
+    (fn [m] (core/some #{v} (vals m)))
+    (str "a map with val " (pr-str v))
+    (fn [m]
+      (str "vals: " (string/join ", " (vals m)) " (was " (pr-str m) ")"))))
 
 (defn has-key
   "passes if the map received has the given key
@@ -252,11 +273,11 @@
   (matcha/run-match (matcha/has-key 1) {:a 1}) ; => passes
   (matcha/run-match (matcha/has-key 1) {:a 2})  ; => fails"
   [v]
-  {:match (fn [m] (core/some #{v} (keys m)))
-   :description (str "a map with key " (pr-str v))
-   :describe-mismatch
-   (fn [m]
-     (str "keys: " (string/join ", " (keys m)) " (was " (pr-str m) ")"))})
+  (make-record-matcher
+    (fn [m] (core/some #{v} (keys m)))
+    (str "a map with key " (pr-str v))
+    (fn [m]
+      (str "keys: " (string/join ", " (keys m)) " (was " (pr-str m) ")"))))
 
 (defn includes
   "passes if the sequence received includes the given item
@@ -264,12 +285,10 @@
   (matcha/run-match (matcha/includes 1) [1]) ; => passes
   (matcha/run-match (matcha/includes 1) [2]) ; => fails"
   [x]
-  {:match
-   (fn [xs] (core/some #{x} xs))
-   :description
-   (str "includes " (pr-str x))
-   :describe-mismatch
-   standard-describe-mismatch})
+  (make-record-matcher
+    (fn [xs] (core/some #{x} xs))
+    (str "includes " (pr-str x))
+    standard-describe-mismatch))
 
 (defn every?
   "passes if every element of the sequence received matches the matcher
@@ -277,16 +296,14 @@
   (matcha/run-match (matcha/every? (matcha/= 1)) [1]) ; => passes
   (matcha/run-match (matcha/every? (matcha/= 1)) [2]) ; => fails"
   [m]
-  {:match
-   (fn [xs] (core/every? (:match m) xs))
-   :description
-   (str "every item is " (:description m))
-   :describe-mismatch
-   (fn [xs]
-     (->> xs
-       (filter (complement (:match m)))
-       (map (:describe-mismatch m))
-       (string/join "an item ")))})
+  (make-record-matcher
+    (fn [xs] (core/every? (:match m) xs))
+    (str "every item is " (:description m))
+    (fn [xs]
+      (->> xs
+        (filter (complement (:match m)))
+        (map (:describe-mismatch m))
+        (string/join "an item ")))))
 
 (defn some
   "passes if some elements of the sequence received matches the matcher
@@ -294,16 +311,14 @@
   (matcha/run-match (matcha/some? (matcha/= 1)) [1 2]) ; => passes
   (matcha/run-match (matcha/some? (matcha/= 1)) [2]) ; => fails"
   [m]
-  {:match
-   (fn [xs] (core/some (:match m) xs))
-   :description
-   (str "some items are " (:description m))
-   :describe-mismatch
-   (fn [xs]
-     (->> xs
-       (filter (complement (:match m)))
-       (map #(str "an item " ((:describe-mismatch m) %)))
-       (string/join " ")))})
+  (make-record-matcher
+    (fn [xs] (core/some (:match m) xs))
+    (str "some items are " (:description m))
+    (fn [xs]
+      (->> xs
+        (filter (complement (:match m)))
+        (map #(str "an item " ((:describe-mismatch m) %)))
+        (string/join " ")))))
 
 (defn is-in?
   "passes if the value is included in the given collection
@@ -311,8 +326,9 @@
   (matcha/run-match (matcha/is-in? [1]) 1) ; => passes
   (matcha/run-match (matcha/is-in? [5]) 1) ; => fails"
   [xs]
-  {:match #(core/some #{%} xs)
-   :description (str "one of " (pr-str xs))})
+  (make-record-matcher
+    #(core/some #{%} xs)
+    (str "one of " (pr-str xs))))
 
 (defn re-matches
   "passes if the string matches the regex given
@@ -323,8 +339,9 @@
   (type-matcher
     core/string?
     "string"
-    {:match #(core/re-matches re %)
-     :description (str "a string matching " (pr-str re))}))
+    (make-record-matcher
+      #(core/re-matches re %)
+      (str "a string matching " (pr-str re)))))
 
 (defn contains-string
   "passes if the string includes the given string
@@ -335,8 +352,9 @@
   (type-matcher
     core/string?
     "string"
-    {:match #(.contains ^String % s)
-     :description (str "a string including " (pr-str s))}))
+    (make-record-matcher
+      #(.contains ^String % s)
+      (str "a string including " (pr-str s)))))
 
 (defn starts-with
   "passes if the string starts with the given string
@@ -347,8 +365,9 @@
   (type-matcher
     core/string?
     "string"
-    {:match #(.startsWith ^String % s)
-     :description (str "a string starting with " (pr-str s))}))
+    (make-record-matcher
+      #(.startsWith ^String % s)
+      (str "a string starting with " (pr-str s)))))
 
 (defn ends-with
   "passes if the string ends with the given string
@@ -359,8 +378,9 @@
   (type-matcher
     core/string?
     "string"
-    {:match #(.endsWith ^String % s)
-     :description (str "a string ending with " (pr-str s))}))
+    (make-record-matcher
+      #(.endsWith ^String % s)
+      (str "a string ending with " (pr-str s)))))
 
 (defn equal-ignoring-case
   "passes if the string is equal to the other string ignoring case
@@ -406,28 +426,29 @@
   (type-matcher
     core/string?
     "string"
-    {:match
-     (fn [given-string]
-       (contains-in-order-matches given-string strings))
-     :description (str "a string containing " (string/join ", " (map pr-str strings)) " in order")}))
+    (make-record-matcher
+      (fn [given-string]
+        (contains-in-order-matches given-string strings))
+      (str "a string containing " (string/join ", " (map pr-str strings)) " in order"))))
 
 (defn not
   "passes if the given matcher fails
   (matcha/run-match (matcha/not (matcha/= 1)) 1) ; => passes
   (matcha/run-match (matcha/not (matcha/= 2)) 1) ; => fails"
   [m]
-  {:match #(core/not ((:match m) %))
-   :description (str "not " (:description m))
-   :describe-mismatch
-   standard-describe-mismatch})
+  (make-record-matcher
+    #(core/not ((:match m) %))
+    (str "not " (:description m))
+    standard-describe-mismatch))
 
 (defn instance?
   "passes if the value matches the given class
   (matcha/run-match (matcha/instance? clojure.lang.Keyword) :foo) ; => passes
   (matcha/run-match (matcha/instance? clojure.lang.Keyword) 1) ; => fails"
   [klazz]
-  {:match #(core/instance? klazz %)
-   :description (str "an instance of " (.getName ^java.lang.Class klazz))})
+  (make-record-matcher
+    #(core/instance? klazz %)
+    (str "an instance of " (.getName ^java.lang.Class klazz))))
 
 (defn isa?
   "passes if the value isa? the given object
@@ -435,8 +456,9 @@
   (matcha/run-match (matcha/isa? :parent) :child) ; => passes
   (matcha/run-match (matcha/isa? :child) :child) ; => fails"
   [parent]
-  {:match #(core/isa? % parent)
-   :description (str "something with a parent of " parent)})
+  (make-record-matcher
+    #(core/isa? % parent)
+    (str "something with a parent of " parent)))
 
 (def
   ^{:doc
@@ -444,8 +466,9 @@
     (matcha/run-match matcha/string? \"foo\") ; => passes
     (matcha/run-match matcha/string? 1) ; => fails"}
   string?
-  {:match core/string?
-   :description "a string"})
+  (make-record-matcher
+    core/string?
+    "a string"))
 
 (def
   ^{:doc
@@ -453,8 +476,9 @@
     (matcha/run-match matcha/map? {}) ; => passes
     (matcha/run-match matcha/map? 1) ; => fails"}
   map?
-  {:match core/map?
-   :description "a map"})
+  (make-record-matcher
+    core/map?
+    "a map"))
 
 (def
   ^{:doc
@@ -462,8 +486,9 @@
     (matcha/run-match matcha/seq? {}) ; => passes
     (matcha/run-match matcha/seq? 1) ; => fails"}
   seq?
-  {:match core/seq?
-   :description "a sequence"})
+  (make-record-matcher
+    core/seq?
+    "a sequence"))
 
 (def
   ^{:doc
@@ -471,8 +496,9 @@
     (matcha/run-match matcha/char? {}) ; => passes
     (matcha/run-match matcha/char? 1) ; => fails"}
   char?
-  {:match core/char?
-   :description "a character"})
+  (make-record-matcher
+    core/char?
+    "a character"))
 
 (def
   ^{:doc
@@ -480,8 +506,9 @@
     (matcha/run-match matcha/vector? {}) ; => passes
     (matcha/run-match matcha/vector? 1) ; => fails"}
   vector?
-  {:match core/vector?
-   :description "a vector"})
+  (make-record-matcher
+    core/vector?
+    "a vector"))
 
 (def
   ^{:doc
@@ -489,8 +516,9 @@
     (matcha/run-match matcha/keyword? :foo) ; => passes
     (matcha/run-match matcha/keyword? 1) ; => fails"}
   keyword?
-  {:match core/keyword?
-   :description "a keyword"})
+  (make-record-matcher
+    core/keyword?
+    "a keyword"))
 
 (def
   ^{:doc
@@ -498,8 +526,9 @@
     (matcha/run-match matcha/symbol? 'foo) ; => passes
     (matcha/run-match matcha/symbol? 1) ; => fails"}
   symbol?
-  {:match core/symbol?
-   :description "a symbol"})
+  (make-record-matcher
+    core/symbol?
+    "a symbol"))
 
 (def
   ^{:doc
@@ -507,8 +536,9 @@
     (matcha/run-match matcha/nil? nil) ; => passes
     (matcha/run-match matcha/nil? 1) ; => fails"}
   nil?
-  {:match core/nil?
-   :description "nil"})
+  (make-record-matcher
+    core/nil?
+    "nil"))
 
 (def
   ^{:doc
@@ -517,8 +547,9 @@
     (matcha/run-match matcha/ratio? 1/5) ; => passes
     (matcha/run-match matcha/ratio? 5) ; => fails"}
   ratio?
-  {:match core/ratio?
-   :description "a ratio"})
+  (make-record-matcher
+    core/ratio?
+    "a ratio"))
 
 (def
   ^{:doc
@@ -527,8 +558,9 @@
     (matcha/run-match matcha/decimal? bigdec 1)) ; => passes
     (matcha/run-match matcha/decimal? 5) ; => fails"}
   decimal?
-  {:match core/decimal?
-   :description "a decimal"})
+  (make-record-matcher
+    core/decimal?
+    "a decimal"))
 
 (def
   ^{:doc
@@ -537,8 +569,9 @@
     (matcha/run-match matcha/rational? 1) ; => passes
     (matcha/run-match matcha/rational? \"a\") ; => fails"}
   rational?
-  {:match core/rational?
-   :description "a rational"})
+  (make-record-matcher
+    core/rational?
+    "a rational"))
 
 (def
   ^{:doc
@@ -547,8 +580,9 @@
     (matcha/run-match matcha/float? (float 1.0)) ; => passes
     (matcha/run-match matcha/float? 5) ; => fails"}
   float?
-  {:match core/float?
-   :description "a float"})
+  (make-record-matcher
+    core/float?
+    "a float"))
 
 (def
   ^{:doc
@@ -557,8 +591,9 @@
     (matcha/run-match matcha/coll? []) ; => passes
     (matcha/run-match matcha/coll? 5) ; => fails"}
   coll?
-  {:match core/coll?
-   :description "a collection"})
+  (make-record-matcher
+    core/coll?
+    "a collection"))
 
 (def
   ^{:doc
@@ -567,8 +602,9 @@
     (matcha/run-match matcha/list? '()) ; => passes
     (matcha/run-match matcha/list? 5) ; => fails"}
   list?
-  {:match core/list?
-   :description "a list"})
+  (make-record-matcher
+    core/list?
+    "a list"))
 
 (def
   ^{:doc
@@ -577,8 +613,9 @@
     (matcha/run-match matcha/set? #{}) ; => passes
     (matcha/run-match matcha/set? 5) ; => fails"}
   set?
-  {:match core/set?
-   :description "a set"})
+  (make-record-matcher
+    core/set?
+    "a set"))
 
 (def
   ^{:doc
@@ -587,8 +624,9 @@
     (matcha/run-match matcha/truthy? #{}) ; => passes
     (matcha/run-match matcha/truthy? nil) ; => fails"}
   truthy?
-  {:match identity
-   :description "a truthy value"})
+  (make-record-matcher
+    identity
+    "a truthy value"))
 
 (def
   ^{:doc
@@ -597,8 +635,9 @@
     (matcha/run-match matcha/falsey? #{}) ; => passes
     (matcha/run-match matcha/falsey? nil) ; => fails"}
   falsey?
-  {:match not
-   :description "a falsey value"})
+  (make-record-matcher
+    not
+    "a falsey value"))
 
 (def
   ^{:doc
@@ -607,19 +646,21 @@
     (matcha/run-match matcha/fn? #()) ; => passes
     (matcha/run-match matcha/fn? 5) ; => fails"}
   fn?
-  {:match core/fn?
-   :description "a function"})
+  (make-record-matcher
+    core/fn?
+    "a function"))
 
 (defn assert-good-matcher [{:keys [match description describe-mismatch] :as matcher}]
-  (assert (not (nil? matcher)) "Matcher should not be nil")
-  (assert match
-          (str "matcher should have a :match key. Matcher: " matcher))
-  (assert description
-          (str "matcher should have a :description key. Matcher: " matcher))
+  (when-not (satisfies? Matcher matcher)
+    (assert (not (nil? matcher)) "Matcher should not be nil")
+    (assert match
+            (str "matcher should have a :match key. Matcher: " matcher))
+    (assert description
+            (str "matcher should have a :description key. Matcher: " matcher))
 
-  (assert (core/= 0 (count (dissoc matcher :match :description :describe-mismatch)))
-          (str "matcher shouldn't have extra keys, but had "
-               (describe-list "" (dissoc matcher :match :description :describe-mismatch)))))
+    (assert (core/= 0 (count (dissoc matcher :match :description :describe-mismatch)))
+            (str "matcher shouldn't have extra keys, but had "
+                 (describe-list "" (dissoc matcher :match :description :describe-mismatch))))))
 
 (defn run-match
   "runs a matcher, given a value to match against.
@@ -637,11 +678,11 @@
   the results can be made human readable with (format-message result)"
   [matcher a]
   (assert-good-matcher matcher)
-  (if ((:match matcher) a)
+  (if (match matcher a)
     {:pass? true}
     {:pass? false
-     :expected (:description matcher)
-     :was ((:describe-mismatch matcher describe-class-mismatch) a)
+     :expected (description matcher)
+     :was (describe-mismatch matcher a)
      :matcher matcher}))
 
 (defmacro is
