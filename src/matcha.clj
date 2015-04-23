@@ -10,20 +10,7 @@
             [clojure.test :as test]
             [clojure.data :as data]
             [clojure.pprint :as pprint]))
-;; Matcher
-;; Match
-;;
-;; is :: a -> Matcher a
-;; allOf [Matcher a] -> Matcher a
-;; runMatcher -> Matcher a -> a -> Match
 
-;; a matcher is a map with three fields, each of whose values are functions:
-;; {:match ;; a -> Bool
-;;  :description :: String
-;;  :describe-mismatch :: a -> String }
-;;
-;;  a match is a map with pass? and message, message will be a string
-;;  if pass? if false
 (defn describe-list [call xs]
   (str "(" call " " (clojure.string/join " " xs) ")"))
 
