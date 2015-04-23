@@ -8,7 +8,8 @@
   (:require [clojure.string :as string]
             [clojure.core :as core]
             [clojure.test :as test]
-            [clojure.data :as data]))
+            [clojure.data :as data]
+            [clojure.pprint :as pprint]))
 ;; Matcher
 ;; Match
 ;;
@@ -29,15 +30,18 @@
 (defn standard-describe-mismatch [x]
   (pr-str x))
 
+(defn pp [x]
+  (with-out-str (pprint/pprint x)))
+
 (defn describe-class-mismatch [x]
-  (str (pr-str x)
+  (str (pp x)
        (if (clojure.core/nil? x)
          ""
          (str " <" (class x) ">"))))
 
-
 (defn describe-mismatch-feature [x feature-name feature-mismatch]
   (str (standard-describe-mismatch x) " with " feature-name " " feature-mismatch))
+
 
 (defn on
   "combinator. Passes if the (f the-value) matches the matcher"
@@ -79,8 +83,12 @@
    (fn [x]
      (let [[things-in-a things-in-x things-in-both] (data/diff a x)]
        (str (describe-class-mismatch x)
-         "\n+" (pr-str things-in-a)
-         "\n-" (pr-str things-in-x))))})
+            (if (not= things-in-a things-in-x)
+              (str
+
+                "\n    diff:"
+                "\n       +: " (pp things-in-a)
+                "\n       -: " (pp things-in-x))))))})
 
 (defn <=
   "matches based if the value given is greater-than or equal to
