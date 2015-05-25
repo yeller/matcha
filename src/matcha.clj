@@ -11,21 +11,6 @@
             [clojure.data :as data]
             [clojure.pprint :as pprint]))
 
-(defprotocol Matcher
-  (match [this a] "returns a truthy value if the matcher matches the given value")
-  (description [this] "returns a human readable description of the matcher")
-  (describe-mismatch [this a] "returns a human readable string of the mismatch of the matcher and the value given. It is an *error* to call describe-mismatch without checking match first, and you should expect unspecified behavior, exceptions, and so on."))
-
-(defrecord RecordMatcher [match description describe-mismatch]
-  Matcher
-  (match [this a] ((:match this) a))
-  (description [this] description)
-  (describe-mismatch [this a] ((or (:describe-mismatch this) describe-class-mismatch) a)))
-
-(defn make-record-matcher
-  ([match description] (make-record-matcher match description describe-class-mismatch))
-  ([match description describe-mismatch]
-   (->RecordMatcher match description describe-mismatch)))
 
 (defn describe-list [call xs]
   (str "(" call " " (clojure.string/join " " xs) ")"))
@@ -41,6 +26,22 @@
        (if (clojure.core/nil? x)
          ""
          (str " <" (class x) ">"))))
+
+(defprotocol Matcher
+  (match [this a] "returns a truthy value if the matcher matches the given value")
+  (description [this] "returns a human readable description of the matcher")
+  (describe-mismatch [this a] "returns a human readable string of the mismatch of the matcher and the value given. It is an *error* to call describe-mismatch without checking match first, and you should expect unspecified behavior, exceptions, and so on."))
+
+(defrecord RecordMatcher [match description describe-mismatch]
+  Matcher
+  (match [this a] ((:match this) a))
+  (description [this] description)
+  (describe-mismatch [this a] ((or (:describe-mismatch this) describe-class-mismatch) a)))
+
+(defn make-record-matcher
+  ([match description] (make-record-matcher match description describe-class-mismatch))
+  ([match description describe-mismatch]
+   (->RecordMatcher match description describe-mismatch)))
 
 (extend-protocol Matcher java.util.Map
   (match [this a] ((:match this) a))
