@@ -4,7 +4,7 @@ A clojure library for composable test assertions with readable error messages
 
 ## Installation
 
-Grab from clojars (TODO)
+Grab from clojars (https://clojars.org/matcha)
 
 ## Getting Started
 
@@ -24,11 +24,11 @@ Here's what a basic assertion looks like with `clojure.test`:
 
 There are a *lot* of matchers included in this project. If you're working with
 a core clojure or java data structure, chances are `matcha` supports working
-with it. See the api docs for more: TODO
+with it. See the api docs for more: http://yeller.github.io/matcha/doc/matcha.html
 
 ## License
 
-Copyright © 2014 Tom Crayford and Reid Draper
+Copyright © 2014-2015 Tom Crayford and Reid Draper
 
 Distributed under the Eclipse Public License either version 1.0 or (at
 your option) any later version.
