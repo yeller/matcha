@@ -77,7 +77,7 @@
         (str "not a " type-name ", " (describe-class-mismatch x))))))
 
 (defn =
-  "matches based on equality of the value given
+  "matches if the value given is equal to its argument
 
   (matcha/run-match (matcha/= 1) 1) ; => passes
   (matcha/run-match (matcha/= 1) 2) ; => fails"
@@ -96,10 +96,11 @@
                  "\n       -: " (pp things-in-x))))))))
 
 (defn <=
-  "matches based if the value given is greater-than or equal to
+  "matches if the value given is less than or equal to its argument
 
+  (matcha/run-match (matcha/<= 1) 0) ; => passes
   (matcha/run-match (matcha/<= 1) 1) ; => passes
-  (matcha/run-match (matcha/<= 1) 0) ; => fails"
+  (matcha/run-match (matcha/<= 1) 2) ; => fails"
   [a]
   (make-record-matcher
     (fn [b] (core/<= a b))
@@ -107,10 +108,11 @@
     standard-describe-mismatch))
 
 (defn <
-  "matches based if the value given is greater-than or equal to
+  "matches if the value given is less than its argument
 
-  (matcha/run-match (matcha/< 1) 2) ; => passes
-  (matcha/run-match (matcha/< 1) 0) ; => fails"
+  (matcha/run-match (matcha/< 1) 0) ; => passes
+  (matcha/run-match (matcha/< 1) 1) ; => fails
+  (matcha/run-match (matcha/< 1) 2) ; => fails"
   [a]
   (make-record-matcher
     (fn [b] (core/< a b))
@@ -118,9 +120,10 @@
     standard-describe-mismatch))
 
 (defn >
-  "matches based if the value given is greater-than
+  "matches if the value given is greater than its argument
 
   (matcha/run-match (matcha/> 1) 2) ; => passes
+  (matcha/run-match (matcha/> 1) 1) ; => fails
   (matcha/run-match (matcha/> 1) 0) ; => fails"
   [a]
   (make-record-matcher
@@ -129,10 +132,11 @@
     describe-class-mismatch))
 
 (defn >=
-  "matches based if the value given is less-than or equal to
+  "matches if the value given is less than or equal to its argument
 
+  (matcha/run-match (matcha/<= 1) 0) ; => passes
   (matcha/run-match (matcha/<= 1) 1) ; => passes
-  (matcha/run-match (matcha/<= 1) 0) ; => fails"
+  (matcha/run-match (matcha/<= 1) 2) ; => fails"
   [a]
   (make-record-matcher
     (fn [b] (core/>= a b))
@@ -142,7 +146,7 @@
 (defn has-numerator
   "passes if the ratio has the numerator given
   (matcha/run-match (matcha/has-numerator 1) 1/10) ; => passes
-  (matcha/run-match matcha/nil? 1) ; => fails"
+  (matcha/run-match (matcha/has-numerator 2) 1/10) ; => fails"
   [n]
   (type-matcher
     core/ratio?
@@ -151,8 +155,8 @@
 
 (defn has-denominator
   "passes if the ratio has the denominator given
-  (matcha/run-match (matcha/has-numerator 1) 1/10) ; => passes
-  (matcha/run-match matcha/nil? 1) ; => fails"
+  (matcha/run-match (matcha/has-denominator 10) 1/10) ; => passes
+  (matcha/run-match (matcha/has-denominator 11) 1/10) ; => fails"
   [n]
   (type-matcher
     core/ratio?
@@ -162,8 +166,8 @@
 (def empty?
   "matches if the collection passed is empty
 
-  (matcha/run-match matcha/empty? [1]) ; => passes
-  (matcha/run-match matcha/empty? [])  ; => fails"
+  (matcha/run-match matcha/empty? [])  ; => passes
+  (matcha/run-match matcha/empty? [1]) ; => fails"
   (make-record-matcher
     core/empty?
     "an empty collection"))
@@ -209,26 +213,28 @@
   (on count (= n) "count" "a collection"))
 
 (defn has-count-that
-  "passes if the sequence received has the given count
+  "passes if the sequence received has a count which matches
+   the nested matcher
   (matcha/run-match (matcha/has-count-that (matcha/= 1)) [1]) ; => passes
   (matcha/run-match (matcha/has-count-that (matcha/= 1)) [])  ; => fails"
   [m]
   (on count m "count" "a collection"))
 
 (defn has-nth
-  "passes if the sequence received has the value matching the matcher given at
-  (nth n)
+  "passes if the nested matcher passes when run against the value at
+  position n in the supplied sequence
 
-  (matcha/run-match (matcha/has-count 1) [1]) ; => passes
-  (matcha/run-match (matcha/has-count 2) [])  ; => fails"
+  (matcha/run-match (matcha/has-nth) (matcha/= 10) 1 [9 10 11]) ; => passes
+  (matcha/run-match (matcha/has-nth) (matcha/= 10) 0 [9 10 11]) ; => fails"
   [m n]
   (on #(nth % n) m "nth value" "a collection"))
 
 (defn has-entry
-  "passes if the map received has the given map-entry
+  "passes if the map received has a map-entry whose key and value
+  match the arguments supplied
 
   (matcha/run-match (matcha/has-entry :a 1) {:a 1}) ; => passes
-  (matcha/run-match (matcha/has-entry :a 1) {:a 2})  ; => fails"
+  (matcha/run-match (matcha/has-entry :a 1) {:a 2}) ; => fails"
   [k v]
   (make-record-matcher
     (fn [m] (core/= (get m k) v))
@@ -239,10 +245,11 @@
         (str "a map not containing the key " (pr-str k) " (was " (pr-str m) ")")))))
 
 (defn has-entry-that
-  "passes if the map received has a value at the key given that matches the matcher
+  "passes if the map received has a value at the key given that matches the
+  nested matcher
 
   (matcha/run-match (matcha/has-entry-that :a (matcha/= 1)) {:a 1}) ; => passes
-  (matcha/run-match (matcha/has-entry-that :a (matcha/= 2)) {:a 2})  ; => fails"
+  (matcha/run-match (matcha/has-entry-that :a (matcha/= 1)) {:a 2}) ; => fails"
   [k matcher]
   (make-record-matcher
     (fn [m] ((:match matcher) (get m k)))
@@ -257,10 +264,10 @@
         (str "a map not containing the key " (pr-str k) " (was " (pr-str m) ")")))))
 
 (defn has-val
-  "passes if the map received has the given val
+  "passes if the map received contains the given val
 
   (matcha/run-match (matcha/has-val 1) {:a 1}) ; => passes
-  (matcha/run-match (matcha/has-val 1) {:a 2})  ; => fails"
+  (matcha/run-match (matcha/has-val 1) {:a 2}) ; => fails"
   [v]
   (make-record-matcher
     (fn [m] (core/some #{v} (vals m)))
@@ -269,10 +276,10 @@
       (str "vals: " (string/join ", " (vals m)) " (was " (pr-str m) ")"))))
 
 (defn has-key
-  "passes if the map received has the given key
+  "passes if the map received contains the given key
 
-  (matcha/run-match (matcha/has-key 1) {:a 1}) ; => passes
-  (matcha/run-match (matcha/has-key 1) {:a 2})  ; => fails"
+  (matcha/run-match (matcha/has-key :a) {:a 1}) ; => passes
+  (matcha/run-match (matcha/has-key :z) {:a 1}) ; => fails"
   [v]
   (make-record-matcher
     (fn [m] (core/some #{v} (keys m)))
@@ -295,6 +302,7 @@
   "passes if every element of the sequence received matches the matcher
 
   (matcha/run-match (matcha/every? (matcha/= 1)) [1]) ; => passes
+  (matcha/run-match (matcha/every? (matcha/= 1)) [])  ; => passes
   (matcha/run-match (matcha/every? (matcha/= 1)) [2]) ; => fails"
   [m]
   (make-record-matcher
@@ -307,7 +315,7 @@
         (string/join "an item ")))))
 
 (defn some
-  "passes if some elements of the sequence received matches the matcher
+  "passes if any elements of the sequence received match the matcher
 
   (matcha/run-match (matcha/some? (matcha/= 1)) [1 2]) ; => passes
   (matcha/run-match (matcha/some? (matcha/= 1)) [2]) ; => fails"
@@ -345,10 +353,11 @@
       (str "a string matching " (pr-str re)))))
 
 (defn contains-string
-  "passes if the string includes the given string
+  "passes if the string being tested includes the string supplied
+  as a matcher argument
 
-  (matcha/run-match (matcha/contains-string \"a\") \"a\") ; => passes
-  (matcha/run-match (matcha/contains-string \"a\") \"b\") ; => fails"
+  (matcha/run-match (matcha/contains-string \"a\") \"cat\") ; => passes
+  (matcha/run-match (matcha/contains-string \"a\") \"bell\") ; => fails"
   [s]
   (type-matcher
     core/string?
@@ -358,7 +367,7 @@
       (str "a string including " (pr-str s)))))
 
 (defn starts-with
-  "passes if the string starts with the given string
+  "passes if the string being tested starts with the given string
 
   (matcha/run-match (matcha/starts-with \"a\") \"ab\") ; => passes
   (matcha/run-match (matcha/starts-with \"a\") \"ba\") ; => fails"
@@ -371,7 +380,7 @@
       (str "a string starting with " (pr-str s)))))
 
 (defn ends-with
-  "passes if the string ends with the given string
+  "passes if the string being tested ends with the given string
 
   (matcha/run-match (matcha/ends-with \"a\") \"ba\") ; => passes
   (matcha/run-match (matcha/ends-with \"a\") \"ab\") ; => fails"
@@ -384,7 +393,8 @@
       (str "a string ending with " (pr-str s)))))
 
 (defn equal-ignoring-case
-  "passes if the string is equal to the other string ignoring case
+  "passes if the string being tested is equal to the
+  matcher argument, ignoring case
 
   (matcha/run-match (matcha/equal-ignoring-case \"a\") \"A\") ; => passes
   (matcha/run-match (matcha/equal-ignoring-case \"a\") \"ab\") ; => fails"
@@ -395,7 +405,8 @@
     (on #(.toLowerCase ^String %) (= (.toLowerCase ^String s)) "lower case" "string")))
 
 (defn equal-ignoring-whitespace
-  "passes if the string is equal to the other string ignoring whitespace
+  "passes if the string being tested is equal to the 
+  matcher argument, ignoring whitespace
 
   (matcha/run-match (matcha/equal-ignoring-whitespace \"a\") \"a \") ; => passes
   (matcha/run-match (matcha/equal-ignoring-whitespace \"a \") \"ab\") ; => fails"
@@ -419,7 +430,8 @@
     strings))
 
 (defn contains-in-order
-  "passes if the string contains the strings in order
+  "passes if the string being tested contains the strings
+  given as arguments to the matcher, in the same order
 
   (matcha/run-match (matcha/contains-in-order \"a\" \"b\") \"ab\") ; => passes
   (matcha/run-match (matcha/contains-in-order \"a\" \"b\") \"ac\") ; => fails"
@@ -434,8 +446,9 @@
 
 (defn not
   "passes if the given matcher fails
-  (matcha/run-match (matcha/not (matcha/= 1)) 1) ; => passes
-  (matcha/run-match (matcha/not (matcha/= 2)) 1) ; => fails"
+
+  (matcha/run-match (matcha/not (matcha/= 1)) 2) ; => passes
+  (matcha/run-match (matcha/not (matcha/= 2)) 2) ; => fails"
   [m]
   (make-record-matcher
     #(core/not ((:match m) %))
@@ -443,9 +456,10 @@
     standard-describe-mismatch))
 
 (defn instance?
-  "passes if the value matches the given class
+  "passes if the value matches the class given as a matcher argument
+
   (matcha/run-match (matcha/instance? clojure.lang.Keyword) :foo) ; => passes
-  (matcha/run-match (matcha/instance? clojure.lang.Keyword) 1) ; => fails"
+  (matcha/run-match (matcha/instance? clojure.lang.Keyword) 1)    ; => fails"
   [klazz]
   (make-record-matcher
     #(core/instance? klazz %)
@@ -455,7 +469,7 @@
   "passes if the value isa? the given object
 
   (matcha/run-match (matcha/isa? :parent) :child) ; => passes
-  (matcha/run-match (matcha/isa? :child) :child) ; => fails"
+  (matcha/run-match (matcha/isa? :child) :child)  ; => fails"
   [parent]
   (make-record-matcher
     #(core/isa? % parent)
@@ -464,8 +478,9 @@
 (def
   ^{:doc
     "passes if the value is a string
+
     (matcha/run-match matcha/string? \"foo\") ; => passes
-    (matcha/run-match matcha/string? 1) ; => fails"}
+    (matcha/run-match matcha/string? 1)       ; => fails"}
   string?
   (make-record-matcher
     core/string?
@@ -474,8 +489,9 @@
 (def
   ^{:doc
     "passes if the value is a map
+
     (matcha/run-match matcha/map? {}) ; => passes
-    (matcha/run-match matcha/map? 1) ; => fails"}
+    (matcha/run-match matcha/map? 1)  ; => fails"}
   map?
   (make-record-matcher
     core/map?
@@ -484,8 +500,9 @@
 (def
   ^{:doc
     "passes if the value is a seq
+
     (matcha/run-match matcha/seq? {}) ; => passes
-    (matcha/run-match matcha/seq? 1) ; => fails"}
+    (matcha/run-match matcha/seq? 1)  ; => fails"}
   seq?
   (make-record-matcher
     core/seq?
@@ -494,8 +511,9 @@
 (def
   ^{:doc
     "passes if the value is a char
-    (matcha/run-match matcha/char? {}) ; => passes
-    (matcha/run-match matcha/char? 1) ; => fails"}
+
+    (matcha/run-match matcha/char? \a) ; => passes
+    (matcha/run-match matcha/char? 1)  ; => fails"}
   char?
   (make-record-matcher
     core/char?
@@ -504,8 +522,9 @@
 (def
   ^{:doc
     "passes if the value is a vector
-    (matcha/run-match matcha/vector? {}) ; => passes
-    (matcha/run-match matcha/vector? 1) ; => fails"}
+
+    (matcha/run-match matcha/vector? []) ; => passes
+    (matcha/run-match matcha/vector? 1)  ; => fails"}
   vector?
   (make-record-matcher
     core/vector?
@@ -514,8 +533,9 @@
 (def
   ^{:doc
     "passes if the value is a keyword
+
     (matcha/run-match matcha/keyword? :foo) ; => passes
-    (matcha/run-match matcha/keyword? 1) ; => fails"}
+    (matcha/run-match matcha/keyword? 1)    ; => fails"}
   keyword?
   (make-record-matcher
     core/keyword?
@@ -524,8 +544,9 @@
 (def
   ^{:doc
     "passes if the value is a symbol
+
     (matcha/run-match matcha/symbol? 'foo) ; => passes
-    (matcha/run-match matcha/symbol? 1) ; => fails"}
+    (matcha/run-match matcha/symbol? 1)    ; => fails"}
   symbol?
   (make-record-matcher
     core/symbol?
@@ -534,8 +555,9 @@
 (def
   ^{:doc
     "passes if the value is nil
+
     (matcha/run-match matcha/nil? nil) ; => passes
-    (matcha/run-match matcha/nil? 1) ; => fails"}
+    (matcha/run-match matcha/nil? 1)   ; => fails"}
   nil?
   (make-record-matcher
     core/nil?
@@ -546,7 +568,7 @@
     "passes if the value is a ratio
 
     (matcha/run-match matcha/ratio? 1/5) ; => passes
-    (matcha/run-match matcha/ratio? 5) ; => fails"}
+    (matcha/run-match matcha/ratio? 5)   ; => fails"}
   ratio?
   (make-record-matcher
     core/ratio?
@@ -554,10 +576,10 @@
 
 (def
   ^{:doc
-    "passes if the value is a decimal
+    "passes if the value is a BigDecimal
 
-    (matcha/run-match matcha/decimal? bigdec 1)) ; => passes
-    (matcha/run-match matcha/decimal? 5) ; => fails"}
+    (matcha/run-match matcha/decimal? (bigdec 1)) ; => passes
+    (matcha/run-match matcha/decimal? 5)          ; => fails"}
   decimal?
   (make-record-matcher
     core/decimal?
@@ -567,7 +589,7 @@
   ^{:doc
     "passes if the value is a rational
 
-    (matcha/run-match matcha/rational? 1) ; => passes
+    (matcha/run-match matcha/rational? 1)     ; => passes
     (matcha/run-match matcha/rational? \"a\") ; => fails"}
   rational?
   (make-record-matcher
@@ -579,7 +601,7 @@
     "passes if the value is a float
 
     (matcha/run-match matcha/float? (float 1.0)) ; => passes
-    (matcha/run-match matcha/float? 5) ; => fails"}
+    (matcha/run-match matcha/float? 5)           ; => fails"}
   float?
   (make-record-matcher
     core/float?
@@ -590,7 +612,7 @@
     "passes if the value is a collection
 
     (matcha/run-match matcha/coll? []) ; => passes
-    (matcha/run-match matcha/coll? 5) ; => fails"}
+    (matcha/run-match matcha/coll? 5)  ; => fails"}
   coll?
   (make-record-matcher
     core/coll?
@@ -601,7 +623,7 @@
     "passes if the value is a list
 
     (matcha/run-match matcha/list? '()) ; => passes
-    (matcha/run-match matcha/list? 5) ; => fails"}
+    (matcha/run-match matcha/list? 5)   ; => fails"}
   list?
   (make-record-matcher
     core/list?
@@ -612,7 +634,7 @@
     "passes if the value is a set
 
     (matcha/run-match matcha/set? #{}) ; => passes
-    (matcha/run-match matcha/set? 5) ; => fails"}
+    (matcha/run-match matcha/set? 5)   ; => fails"}
   set?
   (make-record-matcher
     core/set?
@@ -633,8 +655,8 @@
   ^{:doc
     "passes if the value is falsey
 
-    (matcha/run-match matcha/falsey? #{}) ; => passes
-    (matcha/run-match matcha/falsey? nil) ; => fails"}
+    (matcha/run-match matcha/falsey? nil) ; => passes
+    (matcha/run-match matcha/falsey? #{}) ; => fails"}
   falsey?
   (make-record-matcher
     not
@@ -645,7 +667,7 @@
     "passes if the value is a function
 
     (matcha/run-match matcha/fn? #()) ; => passes
-    (matcha/run-match matcha/fn? 5) ; => fails"}
+    (matcha/run-match matcha/fn? 5)   ; => fails"}
   fn?
   (make-record-matcher
     core/fn?
