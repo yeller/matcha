@@ -15,11 +15,11 @@
 
 (matcha/run-match (matcha/&gt; 1) 2) ; =&gt; passes
 (matcha/run-match (matcha/&gt; 1) 1) ; =&gt; fails
-(matcha/run-match (matcha/&gt; 1) 0) ; =&gt; fails</pre></div></div><div class="public anchor" id="var-.3E.3D"><h3>&gt;=</h3><div class="usage"><code>(&gt;= a)</code></div><div class="doc"><pre class="plaintext">matches if the value given is less than or equal to its argument
+(matcha/run-match (matcha/&gt; 1) 0) ; =&gt; fails</pre></div></div><div class="public anchor" id="var-.3E.3D"><h3>&gt;=</h3><div class="usage"><code>(&gt;= a)</code></div><div class="doc"><pre class="plaintext">matches if the value given is greater than or equal to its argument
 
-(matcha/run-match (matcha/&lt;= 1) 0) ; =&gt; passes
-(matcha/run-match (matcha/&lt;= 1) 1) ; =&gt; passes
-(matcha/run-match (matcha/&lt;= 1) 2) ; =&gt; fails</pre></div></div><div class="public anchor" id="var-all-of"><h3>all-of</h3><div class="usage"><code>(all-of &amp; ms)</code></div><div class="doc"><pre class="plaintext">matches if all of the matchers given pass:
+(matcha/run-match (matcha/&gt;= 1) 0) ; =&gt; fails
+(matcha/run-match (matcha/&gt;= 1) 1) ; =&gt; passes
+(matcha/run-match (matcha/&gt;= 1) 2) ; =&gt; passes</pre></div></div><div class="public anchor" id="var-all-of"><h3>all-of</h3><div class="usage"><code>(all-of &amp; ms)</code></div><div class="doc"><pre class="plaintext">matches if all of the matchers given pass:
 
 (matcha/run-match (matcha/all-of (matcha/= 1) (matcha/= 1)) 1) ; =&gt; passes
 (matcha/run-match (matcha/all-of (matcha/= 1) (matcha/= 1)) 2) ; =&gt; fails</pre></div></div><div class="public anchor" id="var-any-of"><h3>any-of</h3><div class="usage"><code>(any-of &amp; ms)</code></div><div class="doc"><pre class="plaintext">passes if any of the given matchers pass:
@@ -52,7 +52,7 @@ as a matcher argument
 matcher argument, ignoring case
 
 (matcha/run-match (matcha/equal-ignoring-case &quot;a&quot;) &quot;A&quot;) ; =&gt; passes
-(matcha/run-match (matcha/equal-ignoring-case &quot;a&quot;) &quot;ab&quot;) ; =&gt; fails</pre></div></div><div class="public anchor" id="var-equal-ignoring-whitespace"><h3>equal-ignoring-whitespace</h3><div class="usage"><code>(equal-ignoring-whitespace s)</code></div><div class="doc"><pre class="plaintext">passes if the string being tested is equal to the 
+(matcha/run-match (matcha/equal-ignoring-case &quot;a&quot;) &quot;ab&quot;) ; =&gt; fails</pre></div></div><div class="public anchor" id="var-equal-ignoring-whitespace"><h3>equal-ignoring-whitespace</h3><div class="usage"><code>(equal-ignoring-whitespace s)</code></div><div class="doc"><pre class="plaintext">passes if the string being tested is equal to the
 matcher argument, ignoring whitespace
 
 (matcha/run-match (matcha/equal-ignoring-whitespace &quot;a&quot;) &quot;a &quot;) ; =&gt; passes
