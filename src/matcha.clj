@@ -103,7 +103,7 @@
   (matcha/run-match (matcha/<= 1) 2) ; => fails"
   [a]
   (make-record-matcher
-    (fn [b] (core/<= a b))
+    (fn [b] (core/<= b a))
     (str "less than or equal to " (pr-str a))
     standard-describe-mismatch))
 
@@ -115,7 +115,7 @@
   (matcha/run-match (matcha/< 1) 2) ; => fails"
   [a]
   (make-record-matcher
-    (fn [b] (core/< a b))
+    (fn [b] (core/< b a))
     (str "less than " (pr-str a))
     standard-describe-mismatch))
 
@@ -127,20 +127,20 @@
   (matcha/run-match (matcha/> 1) 0) ; => fails"
   [a]
   (make-record-matcher
-    (fn [b] (core/> a b))
+    (fn [b] (core/> b a))
     (str "more than " (pr-str a))
     describe-class-mismatch))
 
 (defn >=
-  "matches if the value given is less than or equal to its argument
+  "matches if the value given is greater than or equal to its argument
 
-  (matcha/run-match (matcha/<= 1) 0) ; => passes
-  (matcha/run-match (matcha/<= 1) 1) ; => passes
-  (matcha/run-match (matcha/<= 1) 2) ; => fails"
+  (matcha/run-match (matcha/>= 1) 0) ; => fails
+  (matcha/run-match (matcha/>= 1) 1) ; => passes
+  (matcha/run-match (matcha/>= 1) 2) ; => passes"
   [a]
   (make-record-matcher
-    (fn [b] (core/>= a b))
-    (str "less than or equal to " (pr-str a))
+    (fn [b] (core/>= b a))
+    (str "greater than or equal to " (pr-str a))
     describe-class-mismatch))
 
 (defn has-numerator
@@ -405,7 +405,7 @@
     (on #(.toLowerCase ^String %) (= (.toLowerCase ^String s)) "lower case" "string")))
 
 (defn equal-ignoring-whitespace
-  "passes if the string being tested is equal to the 
+  "passes if the string being tested is equal to the
   matcher argument, ignoring whitespace
 
   (matcha/run-match (matcha/equal-ignoring-whitespace \"a\") \"a \") ; => passes
