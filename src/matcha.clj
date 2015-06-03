@@ -512,7 +512,7 @@
   ^{:doc
     "passes if the value is a char
 
-    (matcha/run-match matcha/char? \a) ; => passes
+    (matcha/run-match matcha/char? \\a) ; => passes
     (matcha/run-match matcha/char? 1)  ; => fails"}
   char?
   (make-record-matcher
