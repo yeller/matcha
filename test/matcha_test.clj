@@ -39,22 +39,24 @@
   (check-failure (matcha/not (matcha/= 2)) 2))
 
 (deftest <=-test
+  (check-successful (matcha/<= 1) 0)
   (check-successful (matcha/<= 1) 1)
-  (check-successful (matcha/<= 1) 2)
-  (check-failure (matcha/<= 3) 2))
+  (check-failure (matcha/<= 1) 2))
 
 (deftest >=-test
+  (check-failure (matcha/>= 1) 0)
   (check-successful (matcha/>= 1) 1)
-  (check-successful (matcha/>= 1) 0)
-  (check-failure (matcha/>= 1) 2))
+  (check-successful (matcha/>= 1) 2))
 
 (deftest <-test
-  (check-successful (matcha/< 1) 2)
-  (check-failure (matcha/< 3) 2))
+  (check-successful (matcha/< 1) 0)
+  (check-failure (matcha/< 1) 1)
+  (check-failure (matcha/< 1) 2))
 
 (deftest >-test
-  (check-successful (matcha/> 1) 0)
-  (check-failure (matcha/> 1) 2))
+  (check-successful (matcha/> 1) 2)
+  (check-failure (matcha/> 1) 1)
+  (check-failure (matcha/> 1) 0))
 
 (deftest instance?-test
   (check-successful (matcha/instance? clojure.lang.Keyword) :foo)
