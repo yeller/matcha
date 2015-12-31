@@ -84,7 +84,7 @@
   [a]
   (make-record-matcher
     (fn [b] (core/= a b))
-    (pr-str a)
+    (pp a)
     (fn [x]
       (let [[things-in-a things-in-x things-in-both] (data/diff a x)]
         (str (describe-class-mismatch x)

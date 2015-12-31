@@ -18,6 +18,15 @@
   (check-successful (matcha/= 1) 1)
   (check-failure (matcha/= 1) 0))
 
+(deftest =-pretty-prints-the-expected-value
+  (let [large-map {:one {:one {:one [1 2] :two [1 2]}
+                         :two {:one [1 2] :two [1 2]}}
+                   :two {:one {:one [1 2] :two [1 2]}
+                         :two {:one [1 2] :two [1 2]}}}
+        match-result (matcha/run-match (matcha/= large-map) {})]
+    (clojure.test/is (= (matcha/pp large-map)
+                        (:expected match-result)))))
+
 (deftest empty?-test
   (check-successful matcha/empty? [])
   (check-failure matcha/empty? [1]))
